@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getOrCreateWeek } from '@/lib/queries/weeks'
-import { getWeekSessions, getWeekPlannedLoads } from '@/lib/queries/sessions'
+import { getWeekSessions, getWeekPlannedLoads, getSessionAthleteCounts } from '@/lib/queries/sessions'
 import { getWeekGames } from '@/lib/queries/games'
 import { weekIdToDate, formatWeekRange, prevWeekId, nextWeekId, isCurrentWeek } from '@/lib/utils/week'
 import WeekGrid from '@/components/planejador/WeekGrid'
@@ -25,7 +25,11 @@ export default async function PlanejadorWeekPage({ params }: Props) {
     getWeekGames(weekId),
   ])
 
-  const plannedLoads = await getWeekPlannedLoads(sessions.map(s => s.id))
+  const sessionIds = sessions.map(s => s.id)
+  const [plannedLoads, athleteCounts] = await Promise.all([
+    getWeekPlannedLoads(sessionIds),
+    getSessionAthleteCounts(sessionIds),
+  ])
   const loadMap = Object.fromEntries(plannedLoads.map(l => [l.session_id, l.planned_load]))
 
   // Build set of blocked dates (game days + vésperas)
@@ -55,6 +59,7 @@ export default async function PlanejadorWeekPage({ params }: Props) {
         plannedLoad:   session ? (loadMap[session.id] ?? 0) : 0,
         game:          gameByDate[dateStr] ?? null,
         isVespera:     vesperaDates.has(dateStr),
+        athleteCount:  session ? (athleteCounts[session.id] ?? 0) : 0,
       })
     }
   }

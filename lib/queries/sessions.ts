@@ -72,6 +72,24 @@ export async function startSession(sessionId: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+export async function getSessionAthleteCounts(
+  sessionIds: string[],
+): Promise<Record<string, number>> {
+  if (sessionIds.length === 0) return {}
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('session_athletes')
+    .select('session_id')
+    .in('session_id', sessionIds)
+
+  if (!data) return {}
+  const counts: Record<string, number> = {}
+  for (const row of data) {
+    counts[row.session_id] = (counts[row.session_id] ?? 0) + 1
+  }
+  return counts
+}
+
 export async function getSessionAthletes(sessionId: string): Promise<SessionAthlete[]> {
   const supabase = createClient()
   const { data, error } = await supabase

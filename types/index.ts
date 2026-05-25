@@ -227,4 +227,12 @@ export interface GridCell {
   plannedLoad:   number
   game:          Game | null
   isVespera:     boolean
+  athleteCount:  number
+}
+
+export interface AthleteReadiness {
+  athleteId:   string
+  status:      'green' | 'yellow' | 'red' | null
+  wellness:    { fatigue: number; sleep_quality: number; doms: number; mood: number } | null
+  prescriptions: PrescriptionAdaptation[]
 }
