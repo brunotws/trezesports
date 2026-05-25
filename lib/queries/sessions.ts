@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Session, SessionExercise, SessionPlannedLoad } from '@/types'
+import type { Session, SessionAthlete, SessionExercise, SessionPlannedLoad, SessionType } from '@/types'
 
 export async function getWeekSessions(weekId: string): Promise<Session[]> {
   const supabase = createClient()
@@ -45,16 +45,43 @@ export async function createSession(
   weekId: string,
   dayOfWeek: number,
   sessionNumber: number,
+  sessionType: SessionType = 'free',
 ): Promise<Session> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('sessions')
-    .insert({ week_id: weekId, day_of_week: dayOfWeek, session_number: sessionNumber })
+    .insert({
+      week_id: weekId,
+      day_of_week: dayOfWeek,
+      session_number: sessionNumber,
+      session_type: sessionType,
+    })
     .select()
     .single()
 
   if (error) throw new Error(error.message)
   return data
+}
+
+export async function startSession(sessionId: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('sessions')
+    .update({ status: 'em_andamento' })
+    .eq('id', sessionId)
+  if (error) throw new Error(error.message)
+}
+
+export async function getSessionAthletes(sessionId: string): Promise<SessionAthlete[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('session_athletes')
+    .select('*, athlete:athletes(*)')
+    .eq('session_id', sessionId)
+    .order('created_at')
+
+  if (error) throw new Error(error.message)
+  return data ?? []
 }
 
 export async function updateSessionType(
