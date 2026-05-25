@@ -2,6 +2,21 @@ import { createClient } from '@/lib/supabase/server'
 import type { Game } from '@/types'
 import { weekIdToDate, addDays, toISODate } from '@/lib/utils/week'
 
+export async function getGames(): Promise<Game[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('games')
+    .select('*')
+    .order('date', { ascending: false })
+  return data ?? []
+}
+
+export async function deleteGame(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('games').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 export async function getWeekGames(weekId: string): Promise<Game[]> {
   const supabase = createClient()
   const start = weekIdToDate(weekId)

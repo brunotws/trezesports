@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Athlete } from '@/types'
+import type { Athlete, SessionAthlete } from '@/types'
 
 export async function getAthletes(): Promise<Athlete[]> {
   const supabase = createClient()
@@ -10,6 +10,65 @@ export async function getAthletes(): Promise<Athlete[]> {
 
   if (error) throw new Error(error.message)
   return data ?? []
+}
+
+export async function getAthlete(id: string): Promise<Athlete | null> {
+  const supabase = createClient()
+  const { data } = await supabase.from('athletes').select('*').eq('id', id).single()
+  return data
+}
+
+export async function createAthlete(values: {
+  name: string
+  birth_date?: string | null
+  position?: string | null
+  modality?: string
+  turma?: string | null
+  resting_hr?: number | null
+  attr_passe?: number | null
+  attr_dominio?: number | null
+  attr_scan?: number | null
+  attr_decisao?: number | null
+  attr_mobilidade?: number | null
+  attr_finalizacao?: number | null
+}): Promise<Athlete> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('athletes')
+    .insert(values)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function updateAthlete(
+  id: string,
+  values: Partial<Omit<Athlete, 'id' | 'created_at'>>,
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('athletes').update(values).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteAthlete(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('athletes').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function getAthleteSessionHistory(
+  athleteId: string,
+  limit = 10,
+): Promise<(SessionAthlete & { session: { day_of_week: number; session_number: number; status: string; session_type: string; actual_rpe: number | null; week: { start_date: string } } })[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('session_athletes')
+    .select('*, session:sessions(day_of_week, session_number, status, session_type, actual_rpe, week:weeks(start_date))')
+    .eq('athlete_id', athleteId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  return (data as typeof data & { session: { day_of_week: number; session_number: number; status: string; session_type: string; actual_rpe: number | null; week: { start_date: string } } }[]) ?? []
 }
 
 export async function getDailyLoadHistory(
