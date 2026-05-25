@@ -1,0 +1,230 @@
+// =============================================================
+// Treze Sports — Types v2
+// =============================================================
+
+export type ExerciseType    = 'tecnico' | 'cognitivo' | 'fisico' | 'misto'
+export type SessionStatus   = 'planejada' | 'em_andamento' | 'encerrada'
+export type SessionType     = 'MD+1' | 'MD+2' | 'MD-4' | 'MD-3' | 'MD-2' | 'MD-1' | 'MD' | 'free'
+export type GameType        = 'amistoso' | 'campeonato'
+export type PositionType    = 'Goleiro' | 'Defensor' | 'Lateral' | 'Volante' | 'Meia' | 'Atacante' | 'Ala' | 'Pivô'
+export type ModalityType    = 'football' | 'futsal'
+export type SurfaceType     = 'grass' | 'synthetic' | 'futsal_court' | 'gym'
+export type ReadinessStatus = 'green' | 'yellow' | 'red'
+
+// -------------------------------------------------------------
+// Database rows
+// -------------------------------------------------------------
+
+export interface Athlete {
+  id:               string
+  name:             string
+  birth_date:       string | null
+  position:         PositionType | null
+  modality:         ModalityType
+  turma:            string | null
+  resting_hr:       number | null
+  attr_passe:       number | null
+  attr_dominio:     number | null
+  attr_scan:        number | null
+  attr_decisao:     number | null
+  attr_mobilidade:  number | null
+  attr_finalizacao: number | null
+  created_at:       string
+}
+
+export interface DailyWellness {
+  id:             string
+  athlete_id:     string
+  date:           string
+  fatigue:        number  // 1–5 (5 = ótimo)
+  sleep_quality:  number
+  doms:           number
+  mood:           number
+  resting_hr:     number | null
+  wellness_total: number
+  created_at:     string
+}
+
+export interface Exercise {
+  id:                         string
+  name:                       string
+  description:                string | null
+  attribute_target:           string | null
+  type:                       ExerciseType
+  fatigue_level:              number
+  is_eccentric:               boolean
+  contraindicated_doms_below: number | null
+  substitute_exercise_id:     string | null
+  created_at:                 string
+}
+
+export interface Week {
+  id:         string
+  start_date: string
+  created_at: string
+}
+
+export interface Session {
+  id:                   string
+  week_id:              string
+  day_of_week:          number   // 0=Seg … 6=Dom
+  session_number:       number   // 1 | 2 | 3
+  session_type:         SessionType
+  surface_type:         SurfaceType | null
+  status:               SessionStatus
+  blocked:              boolean
+  blocked_reason:       string | null
+  actual_rpe:           number | null
+  actual_duration_min:  number | null
+  created_at:           string
+}
+
+export interface SessionExercise {
+  id:          string
+  session_id:  string
+  exercise_id: string
+  position:    number
+  exercise?:   Exercise
+}
+
+export interface SessionAthlete {
+  id:              string
+  session_id:      string
+  athlete_id:      string
+  attended:        boolean | null
+  pse:             number | null
+  individual_srpe: number | null
+  created_at:      string
+  athlete?:        Athlete
+}
+
+export interface Game {
+  id:                string
+  date:              string
+  opponent:          string
+  type:              GameType
+  blocks_day_before: boolean
+  created_at:        string
+}
+
+export interface GameAthlete {
+  game_id:    string
+  athlete_id: string
+  athlete?:   Athlete
+}
+
+export interface SessionTemplate {
+  id:          string
+  name:        string
+  description: string | null
+  created_at:  string
+  exercises?:  SessionTemplateExercise[]
+}
+
+export interface SessionTemplateExercise {
+  id:          string
+  template_id: string
+  exercise_id: string
+  position:    number
+  exercise?:   Exercise
+}
+
+export interface LoadAnalytics {
+  id:                       string
+  athlete_id:               string
+  date:                     string
+  acute_load:               number | null
+  chronic_load:             number | null
+  acwr:                     number | null
+  weekly_monotony:          number | null
+  weekly_strain:            number | null
+  readiness_status:         ReadinessStatus | null
+  volume_adjustment_factor: number | null
+  calculated_at:            string
+}
+
+// -------------------------------------------------------------
+// View results
+// -------------------------------------------------------------
+
+export interface SessionPlannedLoad {
+  session_id:   string
+  planned_load: number
+}
+
+export interface AthleteWeekFatigue {
+  athlete_id:          string
+  week_id:             string
+  accumulated_fatigue: number
+}
+
+export interface ACWRRow {
+  athlete_id:   string
+  acute_load:   number
+  chronic_load: number
+  acwr:         number | null
+}
+
+export interface WeeklyStats {
+  athlete_id:        string
+  weekly_total_load: number
+  weekly_avg_load:   number
+  weekly_std_dev:    number
+  monotony:          number
+  strain:            number
+}
+
+// -------------------------------------------------------------
+// Engine types
+// -------------------------------------------------------------
+
+export interface WellnessInput {
+  fatigue:      number  // 1–5
+  sleepQuality: number
+  doms:         number
+  mood:         number
+}
+
+export interface PrescriptionAdaptation {
+  trigger:          string
+  originalExercise: string
+  replacement:      string
+  reason:           string
+}
+
+export interface MorphocycleContext {
+  sessionType:          SessionType
+  daysToMatch:          number | null
+  suggestedFocus:       string
+  suggestedRpeTarget:   number
+  suggestedDurationMin: number
+}
+
+export interface ReadinessResult {
+  status:                  ReadinessStatus
+  acwr:                    number | null
+  acwrStatus:              ReadinessStatus
+  acuteLoad:               number
+  chronicLoad:             number
+  wellnessTotal:           number
+  wellnessStatus:          ReadinessStatus
+  monotony:                number | null
+  strain:                  number | null
+  volumeAdjustmentFactor:  number
+  recommendations:         string[]
+  prescriptionAdaptations: PrescriptionAdaptation[]
+  morphocycleContext:      MorphocycleContext | null
+}
+
+// -------------------------------------------------------------
+// UI grid types
+// -------------------------------------------------------------
+
+export interface GridCell {
+  dayOfWeek:     number
+  sessionNumber: number
+  session:       Session | null
+  plannedLoad:   number
+  game:          Game | null
+  isVespera:     boolean
+}
