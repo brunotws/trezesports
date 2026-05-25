@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Plus, Dumbbell } from 'lucide-react'
 import { getExercises } from '@/lib/queries/exercises'
 import DeleteExerciseButton from './DeleteExerciseButton'
+import PageHeader from '@/components/layout/PageHeader'
 
 const TYPE_LABELS: Record<string, string> = {
   tecnico:  'Técnico',
@@ -22,11 +23,7 @@ export default async function ExerciciosPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="flex items-center justify-between px-4 pt-6 pb-4 border-b border-border">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Treze Sports</p>
-          <h1 className="text-lg font-semibold">Exercícios</h1>
-        </div>
+      <PageHeader title="Exercícios" subtitle="Treze Sports" backHref="/dashboard">
         <Link
           href="/exercicios/novo"
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
@@ -34,7 +31,7 @@ export default async function ExerciciosPage() {
           <Plus size={15} />
           Novo
         </Link>
-      </header>
+      </PageHeader>
 
       <div className="flex flex-col gap-2 px-4 py-5">
         {exercises.length === 0 ? (

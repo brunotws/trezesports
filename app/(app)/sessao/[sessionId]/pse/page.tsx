@@ -1,7 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { getSessionWithExercises, getSessionAthletes, getWeekPlannedLoads } from '@/lib/queries/sessions'
+import PageHeader from '@/components/layout/PageHeader'
 import PSEPageClient from './PSEPageClient'
 
 interface Props {
@@ -24,15 +23,7 @@ export default async function PSEPage({ params }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="flex items-center gap-3 px-4 pt-6 pb-4 border-b border-border">
-        <Link href={`/sessao/${sessionId}`} className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Sessão</p>
-          <h1 className="text-lg font-semibold">PSE por Atleta</h1>
-        </div>
-      </header>
+      <PageHeader title="PSE por Atleta" subtitle="Sessão" backHref={`/sessao/${sessionId}`} />
 
       <div className="px-4 py-6">
         <PSEPageClient

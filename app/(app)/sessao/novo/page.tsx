@@ -1,4 +1,5 @@
 import { getAthletes } from '@/lib/queries/athletes'
+import PageHeader from '@/components/layout/PageHeader'
 import NewSessionForm from './NewSessionForm'
 
 interface Props {
@@ -18,15 +19,10 @@ export default async function NovaSessionPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="px-4 pt-6 pb-4 border-b border-border">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-          Nova sessão
-        </p>
-        <h1 className="text-lg font-semibold">
-          {date ?? 'Sem data'} · Sessão {sn}
-        </h1>
-      </header>
-
+      <PageHeader
+        title={`${date ?? 'Sem data'} · Sessão ${sn}`}
+        subtitle="Nova sessão"
+      />
       <NewSessionForm
         weekId={weekId}
         day={Number(day)}

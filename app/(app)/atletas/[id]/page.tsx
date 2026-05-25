@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { getAthlete, getAthleteSessionHistory, getDailyLoadHistory } from '@/lib/queries/athletes'
 import { getAthleteACWR } from '@/lib/queries/analytics'
 import { getTodayWellness } from '@/lib/queries/wellness'
 import AttributeRadar from '@/components/atletas/AttributeRadar'
 import WellnessForm from '@/components/atletas/WellnessForm'
 import ACWRChart from '@/components/dashboard/ACWRChart'
+import PageHeader from '@/components/layout/PageHeader'
 import { SESSION_TYPE_LABELS } from '@/lib/engine/morphocycle'
 
 interface Props {
@@ -42,20 +42,13 @@ export default async function AtletaPerfilPage({ params }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="flex items-center gap-3 px-4 pt-6 pb-4 border-b border-border">
-        <Link href="/atletas" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Perfil</p>
-          <h1 className="text-lg font-semibold truncate">{athlete.name}</h1>
-        </div>
+      <PageHeader title={athlete.name} subtitle="Perfil" backHref="/atletas">
         {acwrRow?.acwr != null && (
           <span className={`text-xs font-semibold px-2 py-1 rounded border ${READINESS_BADGE[status]}`}>
             ACWR {acwrRow.acwr.toFixed(2)}
           </span>
         )}
-      </header>
+      </PageHeader>
 
       <div className="flex flex-col gap-6 px-4 py-6">
         {/* Info row */}

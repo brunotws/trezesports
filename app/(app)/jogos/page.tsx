@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { Plus, Trophy, Calendar } from 'lucide-react'
+import { Plus, Trophy } from 'lucide-react'
 import { getGames } from '@/lib/queries/games'
 import DeleteGameButton from './DeleteGameButton'
+import PageHeader from '@/components/layout/PageHeader'
 
 export default async function JogosPage() {
   const games = await getGames()
@@ -11,11 +12,7 @@ export default async function JogosPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="flex items-center justify-between px-4 pt-6 pb-4 border-b border-border">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Treze Sports</p>
-          <h1 className="text-lg font-semibold">Jogos</h1>
-        </div>
+      <PageHeader title="Jogos" subtitle="Treze Sports" backHref="/dashboard">
         <Link
           href="/jogos/novo"
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
@@ -23,7 +20,7 @@ export default async function JogosPage() {
           <Plus size={15} />
           Novo
         </Link>
-      </header>
+      </PageHeader>
 
       <div className="flex flex-col gap-6 px-4 py-5">
         {games.length === 0 && (
