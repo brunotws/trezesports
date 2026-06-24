@@ -290,6 +290,17 @@ export interface GridCell {
   athleteCount:  number
 }
 
+export interface Category {
+  id:         string
+  name:       string
+  color:      string
+  created_at: string
+}
+
+export interface ExerciseWithCategories extends Exercise {
+  categories: Category[]
+}
+
 export interface AthleteReadiness {
   athleteId:   string
   status:      'green' | 'yellow' | 'red' | null

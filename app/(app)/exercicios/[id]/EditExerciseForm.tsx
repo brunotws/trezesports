@@ -4,8 +4,10 @@ import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { updateExerciseAction, deleteExerciseAction } from '@/lib/actions/exercises'
+import { setExerciseCategoriesAction } from '@/lib/actions/categories'
 import { createClient } from '@/lib/supabase/client'
-import type { Exercise } from '@/types'
+import CategoryPicker from '@/components/exercicios/CategoryPicker'
+import type { Exercise, Category } from '@/types'
 
 const TYPES = [
   { value: 'tecnico',   label: 'Técnico' },
@@ -21,9 +23,13 @@ const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'Muito fácil', 2: 'Fácil', 3: 'Moderado', 4: 'Difícil', 5: 'Muito difícil',
 }
 
-interface Props { exercise: Exercise }
+interface Props {
+  exercise:           Exercise
+  categories:         Category[]
+  initialCategoryIds: string[]
+}
 
-export default function EditExerciseForm({ exercise }: Props) {
+export default function EditExerciseForm({ exercise, categories, initialCategoryIds }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -45,6 +51,8 @@ export default function EditExerciseForm({ exercise }: Props) {
   const [coresColetes, setCoresColetes] = useState(exercise.cores_coletes ?? 1)
   const [numBolas, setNumBolas]       = useState(exercise.num_bolas ?? 0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [categoryIds, setCategoryIds] = useState<string[]>(initialCategoryIds)
+  const [localCats, setLocalCats]     = useState<Category[]>(categories)
 
   const availableAttrs = forGoalkeeper ? GOLEIRO_ATTRS : LINHA_ATTRS
 
@@ -70,24 +78,27 @@ export default function EditExerciseForm({ exercise }: Props) {
   function handleSave() {
     if (!name.trim()) return
     startTransition(async () => {
-      await updateExerciseAction(exercise.id, {
-        name: name.trim(),
-        description: description || null,
-        attribute_target: attrPrimary || null,
-        attr_secondary: attrSecondary || null,
-        type,
-        fatigue_level: difficulty,
-        for_goalkeeper: forGoalkeeper,
-        duration_min: durationMin,
-        diagram_url: diagramUrl,
-        progressao: progressao || null,
-        regressao: regressao || null,
-        espaco_necessario: espaco || null,
-        num_cones: numCones || null,
-        num_coletes: numColetes || null,
-        cores_coletes: coresColetes,
-        num_bolas: numBolas || null,
-      })
+      await Promise.all([
+        updateExerciseAction(exercise.id, {
+          name: name.trim(),
+          description: description || null,
+          attribute_target: attrPrimary || null,
+          attr_secondary: attrSecondary || null,
+          type,
+          fatigue_level: difficulty,
+          for_goalkeeper: forGoalkeeper,
+          duration_min: durationMin,
+          diagram_url: diagramUrl,
+          progressao: progressao || null,
+          regressao: regressao || null,
+          espaco_necessario: espaco || null,
+          num_cones: numCones || null,
+          num_coletes: numColetes || null,
+          cores_coletes: coresColetes,
+          num_bolas: numBolas || null,
+        }),
+        setExerciseCategoriesAction(exercise.id, categoryIds),
+      ])
       router.push('/exercicios')
     })
   }
@@ -121,6 +132,17 @@ export default function EditExerciseForm({ exercise }: Props) {
           onChange={e => setDescription(e.target.value)}
           rows={2}
           className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+        />
+      </div>
+
+      {/* Categorias */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium">Categorias <span className="text-muted-foreground font-normal">(opcional)</span></label>
+        <CategoryPicker
+          allCategories={localCats}
+          selectedIds={categoryIds}
+          onChange={setCategoryIds}
+          onCategoryCreated={cat => setLocalCats(prev => [...prev, cat].sort((a, b) => a.name.localeCompare(b.name)))}
         />
       </div>
 

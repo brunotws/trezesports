@@ -4,7 +4,10 @@ import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createExerciseAction } from '@/lib/actions/exercises'
+import { setExerciseCategoriesAction } from '@/lib/actions/categories'
 import { createClient } from '@/lib/supabase/client'
+import CategoryPicker from '@/components/exercicios/CategoryPicker'
+import type { Category } from '@/types'
 
 const TYPES = [
   { value: 'tecnico',   label: 'Técnico' },
@@ -24,7 +27,9 @@ const DIFFICULTY_LABELS: Record<number, string> = {
   5: 'Muito difícil',
 }
 
-export default function NewExerciseForm() {
+interface Props { categories: Category[] }
+
+export default function NewExerciseForm({ categories }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -46,6 +51,8 @@ export default function NewExerciseForm() {
   const [coresColetes, setCoresColetes] = useState(1)
   const [numBolas, setNumBolas]       = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [categoryIds, setCategoryIds]   = useState<string[]>([])
+  const [localCats, setLocalCats]       = useState<Category[]>(categories)
 
   async function handleImageUpload(file: File) {
     setUploading(true)
@@ -71,7 +78,7 @@ export default function NewExerciseForm() {
   function handleSubmit() {
     if (!name.trim()) return
     startTransition(async () => {
-      await createExerciseAction({
+      const { id } = await createExerciseAction({
         name: name.trim(),
         description: description || null,
         attribute_target: attrPrimary || null,
@@ -89,6 +96,9 @@ export default function NewExerciseForm() {
         cores_coletes: coresColetes,
         num_bolas: numBolas || null,
       })
+      if (categoryIds.length > 0) {
+        await setExerciseCategoriesAction(id, categoryIds)
+      }
       router.push('/exercicios')
     })
   }
@@ -116,6 +126,17 @@ export default function NewExerciseForm() {
           rows={2}
           placeholder="Detalhes opcionais…"
           className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+        />
+      </div>
+
+      {/* Categorias */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium">Categorias <span className="text-muted-foreground font-normal">(opcional)</span></label>
+        <CategoryPicker
+          allCategories={localCats}
+          selectedIds={categoryIds}
+          onChange={setCategoryIds}
+          onCategoryCreated={cat => setLocalCats(prev => [...prev, cat].sort((a, b) => a.name.localeCompare(b.name)))}
         />
       </div>
 
