@@ -3,7 +3,7 @@
 // =============================================================
 
 export type ExerciseType    = 'tecnico' | 'cognitivo' | 'fisico' | 'misto'
-export type SessionStatus   = 'planejada' | 'em_andamento' | 'encerrada'
+export type SessionStatus   = 'planejada' | 'em_andamento' | 'encerrada' | 'draft' | 'archived'
 export type SessionType     = 'MD+1' | 'MD+2' | 'MD-4' | 'MD-3' | 'MD-2' | 'MD-1' | 'MD' | 'free'
 export type BlockType       = 'Aquecimento' | 'Parte Analítica' | 'Jogo Condicionado'
 
@@ -95,7 +95,7 @@ export interface Week {
 
 export interface Session {
   id:                   string
-  week_id:              string
+  week_id:              string | null
   day_of_week:          number   // 0=Seg … 6=Dom
   session_number:       number   // 1 | 2 | 3
   session_type:         SessionType

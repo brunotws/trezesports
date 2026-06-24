@@ -7,6 +7,7 @@ export async function getWeekSessions(weekId: string): Promise<Session[]> {
     .from('sessions')
     .select('*')
     .eq('week_id', weekId)
+    .in('status', ['planejada', 'em_andamento', 'encerrada'])
     .order('day_of_week')
     .order('session_number')
 

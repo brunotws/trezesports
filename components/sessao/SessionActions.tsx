@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { buildMorphocycleContext, SESSION_TYPE_LABELS, SESSION_TYPE_COLORS } from '@/lib/engine/morphocycle'
 import { buildPrescriptionAdaptations } from '@/lib/engine/prescriptions'
 import { startSessionAction, updateSessionLogsAction } from '@/lib/actions/sessions'
+import { cloneAsTemplateAction } from '@/lib/actions/sessionTemplates'
 import CloseSessionSheet from './CloseSessionSheet'
 import WellnessCheckinSheet, { type WellnessValues } from './WellnessCheckinSheet'
 import type { Session, SessionAthlete, SessionExercise, AthleteReadiness, BlockType, DailyWellness, PrescriptionAdaptation } from '@/types'
@@ -77,7 +78,9 @@ export default function SessionActions({ session, athletes, readinessMap, planne
   // Diário de bordo
   const [notes, setNotes]         = useState(session.coach_notes ?? '')
   const [intensity, setIntensity] = useState<number | null>(session.team_intensity ?? null)
-  const [savingLog, setSavingLog] = useState(false)
+  const [savingLog, setSavingLog]         = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [templateSaved, setTemplateSaved]   = useState(false)
 
   // Check-in de wellness
   const [checkinAthleteId,   setCheckinAthleteId]   = useState<string | null>(null)
@@ -113,6 +116,14 @@ export default function SessionActions({ session, athletes, readinessMap, planne
     setReadinessOverrides(prev => ({ ...prev, [athleteId]: { status, prescriptions } }))
     setCheckedInIds(prev => new Set(prev).add(athleteId))
     router.refresh()
+  }
+
+  async function handleSaveTemplate() {
+    setSavingTemplate(true)
+    await cloneAsTemplateAction(session.id)
+    setSavingTemplate(false)
+    setTemplateSaved(true)
+    setTimeout(() => setTemplateSaved(false), 3000)
   }
 
   async function handleSaveLog() {
@@ -509,6 +520,18 @@ export default function SessionActions({ session, athletes, readinessMap, planne
           {savingLog ? 'Salvando…' : 'Salvar anotações'}
         </button>
       </div>
+
+      {/* ═══ SALVAR COMO MODELO ═══ */}
+      {session.exercises.length > 0 && session.status !== 'draft' && (
+        <button
+          type="button"
+          onClick={handleSaveTemplate}
+          disabled={savingTemplate || templateSaved}
+          className="w-full py-3 rounded-xl border border-border bg-card text-sm font-medium disabled:opacity-60"
+        >
+          {templateSaved ? '✓ Modelo salvo' : savingTemplate ? 'Salvando…' : '📋 Salvar como Modelo'}
+        </button>
+      )}
 
       {/* ═══ BOTÕES DE AÇÃO ═══ */}
       {session.status === 'planejada' && (
