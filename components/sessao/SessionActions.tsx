@@ -524,10 +524,18 @@ export default function SessionActions({ session, athletes, readinessMap, planne
 
       {session.status === 'em_andamento' && (
         <>
+          {session.exercises.length > 0 && (
+            <a
+              href={`/sessao/${session.id}/live`}
+              className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm text-center block"
+            >
+              🎯 Modo Live — Iniciar Aula
+            </a>
+          )}
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
-            className="w-full py-3.5 rounded-xl bg-red-600 text-white font-semibold text-sm"
+            className="w-full py-3.5 rounded-xl border border-red-600/50 bg-red-600/10 text-red-400 font-semibold text-sm"
           >
             Encerrar Sessão
           </button>
