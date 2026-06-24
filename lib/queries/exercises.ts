@@ -58,6 +58,8 @@ export async function updateExercise(
 
 export async function deleteExercise(id: string): Promise<void> {
   const supabase = createClient()
+  // Remove FK references before deleting the exercise
+  await supabase.from('session_exercises').delete().eq('exercise_id', id)
   const { error } = await supabase.from('exercises').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }
