@@ -40,7 +40,8 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
   const [attrPrimary, setAttrPrimary] = useState(exercise.attribute_target ?? '')
   const [attrSecondary, setAttrSecondary] = useState(exercise.attr_secondary ?? '')
   const [difficulty, setDifficulty]   = useState(exercise.fatigue_level)
-  const [durationMin, setDurationMin] = useState(exercise.duration_min ?? 15)
+  const [durMin, setDurMin]           = useState(Math.floor(exercise.duration_min ?? 0))
+  const [durSec, setDurSec]           = useState(Math.round(((exercise.duration_min ?? 0) % 1) * 60))
   const [diagramUrl, setDiagramUrl]   = useState<string | null>(exercise.diagram_url ?? null)
   const [uploading, setUploading]     = useState(false)
   const [progressao, setProgressao]   = useState(exercise.progressao ?? '')
@@ -87,7 +88,7 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
           type,
           fatigue_level: difficulty,
           for_goalkeeper: forGoalkeeper,
-          duration_min: durationMin,
+          duration_min: durMin + durSec / 60 || null,
           diagram_url: diagramUrl,
           progressao: progressao || null,
           regressao: regressao || null,
@@ -262,22 +263,29 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
 
       {/* Duração */}
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium">Duração</label>
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={() => setDurationMin(v => Math.max(1, v - 5))}
-            className="w-10 h-10 rounded-lg border border-border bg-card text-lg font-bold flex items-center justify-center shrink-0">−</button>
+        <label className="text-sm font-medium">Duração <span className="text-muted-foreground font-normal">(opcional)</span></label>
+        <div className="flex items-center gap-2">
           <div className="flex-1 flex items-center gap-1.5 rounded-lg border border-input bg-muted px-3 py-2.5">
             <input
               type="number"
-              min={1}
-              value={durationMin}
-              onChange={e => setDurationMin(Math.max(1, Number(e.target.value) || 1))}
+              min={0}
+              value={durMin}
+              onChange={e => setDurMin(Math.max(0, Number(e.target.value) || 0))}
               className="w-full bg-transparent text-sm font-bold outline-none text-center tabular-nums"
             />
             <span className="text-sm text-muted-foreground shrink-0">min</span>
           </div>
-          <button type="button" onClick={() => setDurationMin(v => v + 5)}
-            className="w-10 h-10 rounded-lg border border-border bg-card text-lg font-bold flex items-center justify-center shrink-0">+</button>
+          <div className="flex-1 flex items-center gap-1.5 rounded-lg border border-input bg-muted px-3 py-2.5">
+            <input
+              type="number"
+              min={0}
+              max={59}
+              value={durSec}
+              onChange={e => setDurSec(Math.min(59, Math.max(0, Number(e.target.value) || 0)))}
+              className="w-full bg-transparent text-sm font-bold outline-none text-center tabular-nums"
+            />
+            <span className="text-sm text-muted-foreground shrink-0">seg</span>
+          </div>
         </div>
       </div>
 
