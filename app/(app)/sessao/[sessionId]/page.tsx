@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
 import { getSessionWithExercises, getSessionAthletes, getWeekPlannedLoads } from '@/lib/queries/sessions'
 import { getTodayWellness } from '@/lib/queries/wellness'
+import { getExercises } from '@/lib/queries/exercises'
+import { getExerciseGroups } from '@/lib/queries/exerciseGroups'
 import { buildPrescriptionAdaptations } from '@/lib/engine/prescriptions'
 import PageHeader from '@/components/layout/PageHeader'
 import SessionActions from '@/components/sessao/SessionActions'
-import type { AthleteReadiness, DailyWellness } from '@/types'
+import type { AthleteReadiness, DailyWellness, Exercise, ExerciseGroup } from '@/types'
 
 interface Props {
   params: { sessionId: string }
@@ -25,9 +27,12 @@ export default async function SessionPage({ params }: Props) {
   const session = await getSessionWithExercises(sessionId)
   if (!session) notFound()
 
-  const [athletes, loads] = await Promise.all([
+  const isPlanejada = session.status === 'planejada'
+  const [athletes, loads, exercises, groups] = await Promise.all([
     getSessionAthletes(sessionId),
     getWeekPlannedLoads([sessionId]),
+    isPlanejada ? getExercises() : Promise.resolve([] as Exercise[]),
+    isPlanejada ? getExerciseGroups() : Promise.resolve([] as ExerciseGroup[]),
   ])
 
   const plannedLoad = loads[0]?.planned_load ?? 0
@@ -78,6 +83,8 @@ export default async function SessionPage({ params }: Props) {
         readinessMap={readinessMap}
         plannedLoad={plannedLoad}
         wellnessMap={wellnessMap}
+        exercises={isPlanejada ? exercises : undefined}
+        groups={isPlanejada ? groups : undefined}
       />
     </div>
   )

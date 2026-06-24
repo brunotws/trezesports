@@ -213,6 +213,27 @@ export async function insertDuplicateSessionExercise(
   return data as SessionExercise
 }
 
+export async function addSessionExercisesWithReturn(
+  sessionId: string,
+  exercises: Array<{ exerciseId: string; blockType?: string | null; position: number; customDuration?: number | null }>,
+): Promise<SessionExercise[]> {
+  if (exercises.length === 0) return []
+  const supabase = createClient()
+  const rows = exercises.map(({ exerciseId, blockType, position, customDuration }) => ({
+    session_id:      sessionId,
+    exercise_id:     exerciseId,
+    block_type:      blockType ?? null,
+    position,
+    custom_duration: customDuration ?? null,
+  }))
+  const { data, error } = await supabase
+    .from('session_exercises')
+    .insert(rows)
+    .select('*, exercise:exercises(*)')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as SessionExercise[]
+}
+
 export async function markSessionExerciseSkipped(id: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase

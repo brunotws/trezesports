@@ -12,7 +12,7 @@ import { cloneAsTemplateAction } from '@/lib/actions/sessionTemplates'
 import CloseSessionSheet from './CloseSessionSheet'
 import WellnessCheckinSheet, { type WellnessValues } from './WellnessCheckinSheet'
 import SessionExerciseEditor from './SessionExerciseEditor'
-import type { Session, SessionAthlete, SessionExercise, AthleteReadiness, BlockType, DailyWellness, PrescriptionAdaptation } from '@/types'
+import type { Session, SessionAthlete, SessionExercise, AthleteReadiness, BlockType, DailyWellness, PrescriptionAdaptation, Exercise, ExerciseGroup } from '@/types'
 
 const BLOCKS: BlockType[] = ['Aquecimento', 'Parte Analítica', 'Jogo Condicionado']
 
@@ -28,6 +28,8 @@ interface Props {
   readinessMap: AthleteReadiness[]
   plannedLoad:  number
   wellnessMap:  Record<string, DailyWellness | null>
+  exercises?:   Exercise[]
+  groups?:      ExerciseGroup[]
 }
 
 const STATUS_ICON = {
@@ -72,7 +74,7 @@ function dotColor(v: number) {
   return 'bg-red-500'
 }
 
-export default function SessionActions({ session, athletes, readinessMap, plannedLoad, wellnessMap }: Props) {
+export default function SessionActions({ session, athletes, readinessMap, plannedLoad, wellnessMap, exercises, groups }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -415,6 +417,8 @@ export default function SessionActions({ session, athletes, readinessMap, planne
             sessionId={session.id}
             stages={session.stages}
             initialExercises={session.exercises}
+            exercises={exercises}
+            groups={groups}
           />
         ) : useDynamic ? (
           /* Dynamic stages layout */

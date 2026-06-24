@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import {
   createSession, startSession, closeSession, addSessionExercises, updateSessionLogs,
   deleteSessionExercise, reorderSessionExercises, updateSessionExerciseDuration,
-  insertDuplicateSessionExercise, markSessionExerciseSkipped,
+  insertDuplicateSessionExercise, markSessionExerciseSkipped, addSessionExercisesWithReturn,
 } from '@/lib/queries/sessions'
 import { addAthleteToSession, upsertSessionAthlete } from '@/lib/queries/sessionAthletes'
 import type { SessionExercise, SessionType } from '@/types'
@@ -114,4 +114,13 @@ export async function insertDuplicateSessionExerciseAction(
 export async function markSessionExerciseSkippedAction(id: string, sessionId: string): Promise<void> {
   await markSessionExerciseSkipped(id)
   revalidatePath(`/sessao/${sessionId}`)
+}
+
+export async function addExercisesToSessionEditorAction(
+  sessionId: string,
+  exercises: Array<{ exerciseId: string; blockType?: string | null; position: number; customDuration?: number | null }>,
+): Promise<SessionExercise[]> {
+  const ses = await addSessionExercisesWithReturn(sessionId, exercises)
+  revalidatePath(`/sessao/${sessionId}`)
+  return ses
 }
