@@ -67,7 +67,7 @@ export default function NewExerciseForm({ categories }: Props) {
       const { data } = supabase.storage.from('exercise-diagrams').getPublicUrl(path)
       setDiagramUrl(data.publicUrl)
     } catch (e) {
-      alert('Erro ao fazer upload da imagem.')
+      alert('Erro ao fazer upload: ' + (e instanceof Error ? e.message : JSON.stringify(e)))
     } finally {
       setUploading(false)
     }

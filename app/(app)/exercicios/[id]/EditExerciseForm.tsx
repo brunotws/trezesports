@@ -68,8 +68,8 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
       if (error) throw error
       const { data } = supabase.storage.from('exercise-diagrams').getPublicUrl(path)
       setDiagramUrl(data.publicUrl)
-    } catch {
-      alert('Erro ao fazer upload da imagem.')
+    } catch (e) {
+      alert('Erro ao fazer upload: ' + (e instanceof Error ? e.message : JSON.stringify(e)))
     } finally {
       setUploading(false)
     }
