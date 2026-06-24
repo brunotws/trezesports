@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { updateExerciseAction, deleteExerciseAction } from '@/lib/actions/exercises'
+import { updateExerciseAction, deleteExerciseAction, duplicateExerciseAction } from '@/lib/actions/exercises'
 import { setExerciseCategoriesAction } from '@/lib/actions/categories'
 import { createClient } from '@/lib/supabase/client'
 import CategoryPicker from '@/components/exercicios/CategoryPicker'
@@ -109,6 +109,13 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
     startTransition(async () => {
       await deleteExerciseAction(exercise.id)
       router.push('/exercicios')
+    })
+  }
+
+  function handleDuplicate() {
+    startTransition(async () => {
+      const { id } = await duplicateExerciseAction(exercise.id, categoryIds)
+      router.push(`/exercicios/${id}`)
     })
   }
 
@@ -377,6 +384,12 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
         className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-50"
       >
         {isPending ? 'Salvando…' : 'Salvar alterações'}
+      </button>
+
+      <button type="button" onClick={handleDuplicate} disabled={isPending}
+        className="w-full py-3 rounded-xl border border-border bg-card text-sm font-medium text-muted-foreground disabled:opacity-50"
+      >
+        Duplicar exercício
       </button>
 
       <button type="button" onClick={handleDelete} disabled={isPending}

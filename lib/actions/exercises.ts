@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createExercise, updateExercise, deleteExercise } from '@/lib/queries/exercises'
+import { createExercise, updateExercise, deleteExercise, duplicateExercise } from '@/lib/queries/exercises'
+import { setExerciseCategories } from '@/lib/queries/categories'
 import type { Exercise } from '@/types'
 
 export async function createExerciseAction(values: {
@@ -41,4 +42,13 @@ export async function updateExerciseAction(
 export async function deleteExerciseAction(id: string): Promise<void> {
   await deleteExercise(id)
   revalidatePath('/exercicios')
+}
+
+export async function duplicateExerciseAction(id: string, categoryIds: string[]): Promise<{ id: string }> {
+  const copy = await duplicateExercise(id)
+  if (categoryIds.length > 0) {
+    await setExerciseCategories(copy.id, categoryIds)
+  }
+  revalidatePath('/exercicios')
+  return { id: copy.id }
 }

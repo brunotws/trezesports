@@ -56,6 +56,21 @@ export async function updateExercise(
   if (error) throw new Error(error.message)
 }
 
+export async function duplicateExercise(id: string): Promise<Exercise> {
+  const supabase = createClient()
+  const { data: original, error: fetchErr } = await supabase
+    .from('exercises').select('*').eq('id', id).single()
+  if (fetchErr || !original) throw new Error('Exercício não encontrado')
+
+  const { id: _id, created_at: _ca, ...fields } = original
+  const { data, error } = await supabase
+    .from('exercises')
+    .insert({ ...fields, name: `Cópia de ${original.name}` })
+    .select().single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function deleteExercise(id: string): Promise<void> {
   const supabase = createClient()
   // Remove FK references before deleting the exercise
