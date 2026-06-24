@@ -145,15 +145,16 @@ export async function updateSessionType(
 
 export async function addSessionExercises(
   sessionId: string,
-  exercises: Array<{ exerciseId: string; blockType?: string; position: number }>,
+  exercises: Array<{ exerciseId: string; blockType?: string; position: number; customDuration?: number | null }>,
 ): Promise<void> {
   if (exercises.length === 0) return
   const supabase = createClient()
-  const rows = exercises.map(({ exerciseId, blockType, position }) => ({
-    session_id:  sessionId,
-    exercise_id: exerciseId,
-    block_type:  blockType ?? null,
+  const rows = exercises.map(({ exerciseId, blockType, position, customDuration }) => ({
+    session_id:      sessionId,
+    exercise_id:     exerciseId,
+    block_type:      blockType ?? null,
     position,
+    custom_duration: customDuration ?? null,
   }))
   const { error } = await supabase.from('session_exercises').insert(rows)
   if (error) throw new Error(error.message)

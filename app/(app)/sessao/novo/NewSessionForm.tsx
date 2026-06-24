@@ -3,7 +3,6 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { formatDuration } from '@/lib/utils/duration'
 import {
   DndContext,
   DragEndEvent,
@@ -18,90 +17,18 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Plus, X, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { createSessionAction, addAthletesToSessionAction, addExercisesToSessionAction } from '@/lib/actions/sessions'
 import ExercisePickerSheet from '@/components/sessao/ExercisePickerSheet'
-import type { Athlete, Exercise, ExerciseGroup, Stage } from '@/types'
+import ExerciseInstanceCard from '@/components/shared/ExerciseInstanceCard'
+import type { Athlete, Exercise, ExerciseGroup, ExerciseInstance, Stage } from '@/types'
 
 const CATEGORIES = ['Sub-7','Sub-8','Sub-9','Sub-10','Sub-11','Sub-12','Sub-13','Sub-14','Sub-15']
 const OBJECTIVES = ['Técnico', 'Tático', 'Cognitivo', 'Misto']
-const TYPE_COLORS: Record<string, string> = {
-  tecnico:   'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  cognitivo: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  fisico:    'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  misto:     'bg-green-500/20 text-green-400 border-green-500/30',
-}
 
-// ── Sortable exercise card ────────────────────────────────────────────────────
-function SortableExerciseCard({
-  id,
-  exercise,
-  onRemove,
-}: {
-  id: string
-  exercise: Exercise | undefined
-  onRemove: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id })
-
-  if (!exercise) return null
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="flex items-center gap-2 h-12 px-2 rounded-lg border border-border bg-card"
-    >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="p-1 touch-none cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
-      >
-        <GripVertical size={14} />
-      </button>
-
-      {exercise.diagram_url ? (
-        <img src={exercise.diagram_url} alt="" className="w-8 h-8 rounded-md object-cover shrink-0" />
-      ) : (
-        <div className="w-8 h-8 rounded-md bg-muted shrink-0 flex items-center justify-center">
-          <span className="text-[10px] text-muted-foreground/40">⚽</span>
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate">{exercise.name}</p>
-        <div className="flex items-center gap-1.5">
-          <span className={cn('text-[10px] px-1 py-0.5 rounded border shrink-0', TYPE_COLORS[exercise.type] ?? 'bg-muted text-muted-foreground border-border')}>
-            {exercise.type}
-          </span>
-          {exercise.attribute_target && (
-            <span className="text-[10px] text-muted-foreground truncate">{exercise.attribute_target}</span>
-          )}
-        </div>
-      </div>
-
-      {exercise.duration_min && (
-        <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(exercise.duration_min)}</span>
-      )}
-
-      <button
-        type="button"
-        onClick={onRemove}
-        className="p-1 shrink-0 text-muted-foreground/30 hover:text-red-400 transition-colors"
-      >
-        <X size={13} />
-      </button>
-    </div>
-  )
-}
-
-// ── DragOverlay card (ghost while dragging) ───────────────────────────────────
+// ── Drag ghost (shown while dragging) ────────────────────────────────────────
 function ExerciseDragGhost({ exercise }: { exercise: Exercise }) {
   return (
     <div className="flex items-center gap-2 h-12 px-2 rounded-lg border border-primary/30 bg-card shadow-lg shadow-black/20">
@@ -132,31 +59,30 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
   const [isPending, startTransition] = useTransition()
 
   // Header
-  const [title, setTitle]               = useState('')
+  const [title, setTitle]                 = useState('')
   const [scheduledTime, setScheduledTime] = useState('09:00')
-  const [category, setCategory]         = useState('')
-  const [objective, setObjective]       = useState('')
+  const [category, setCategory]           = useState('')
+  const [objective, setObjective]         = useState('')
 
   // Athletes
   const [selectedAthleteIds, setSelectedAthleteIds] = useState<Set<string>>(new Set())
 
   // Stages: each stage has an id (UUID) and a name
-  const initId = () => crypto.randomUUID()
   const [stages, setStages] = useState<Stage[]>(() => [
-    { id: initId(), name: 'Nova Etapa' },
+    { id: crypto.randomUUID(), name: 'Nova Etapa' },
   ])
-  // stageExercises: stageId → exerciseId[]
-  const [stageExercises, setStageExercises] = useState<Record<string, string[]>>({})
+  // stageExercises: stageId → ExerciseInstance[]
+  const [stageExercises, setStageExercises] = useState<Record<string, ExerciseInstance[]>>({})
 
   // Sheet (exercise picker)
-  const [sheetOpen, setSheetOpen]       = useState(false)
+  const [sheetOpen, setSheetOpen]         = useState(false)
   const [activeStageId, setActiveStageId] = useState<string | null>(null)
 
   // DnD
   const [dragActiveId, setDragActiveId] = useState<string | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } }),
   )
 
   // Coach log
@@ -169,11 +95,12 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     [exercises],
   )
 
+  function instanceDuration(inst: ExerciseInstance): number {
+    return inst.customDuration ?? exerciseMap.get(inst.exerciseId)?.duration_min ?? 0
+  }
+
   function stageDuration(stageId: string): number {
-    return (stageExercises[stageId] ?? []).reduce(
-      (sum, eid) => sum + (exerciseMap.get(eid)?.duration_min ?? 0),
-      0,
-    )
+    return (stageExercises[stageId] ?? []).reduce((sum, inst) => sum + instanceDuration(inst), 0)
   }
 
   const totalDuration = useMemo(
@@ -182,9 +109,9 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     [stages, stageExercises],
   )
 
-  function findStageIdByExerciseId(exerciseId: string): string | null {
+  function findStageIdByInstanceId(instanceId: string): string | null {
     for (const stage of stages) {
-      if ((stageExercises[stage.id] ?? []).includes(exerciseId)) return stage.id
+      if ((stageExercises[stage.id] ?? []).some(i => i.instanceId === instanceId)) return stage.id
     }
     return null
   }
@@ -193,7 +120,6 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
   function addStage() {
     const id = crypto.randomUUID()
     setStages(prev => [...prev, { id, name: 'Nova Etapa' }])
-    // no need to pre-populate stageExercises; it defaults to [] via ?? []
   }
 
   function removeStage(stageId: string) {
@@ -209,27 +135,52 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     setStages(prev => prev.map(s => s.id === stageId ? { ...s, name } : s))
   }
 
-  // ── Exercise actions ───────────────────────────────────────────────────────
-  function addExerciseToStage(stageId: string, exerciseId: string) {
+  // ── Exercise instance actions ──────────────────────────────────────────────
+  function addExerciseToStage(stageId: string, exerciseId: string, customDuration: number | null = null) {
+    const instance: ExerciseInstance = { instanceId: crypto.randomUUID(), exerciseId, customDuration }
     setStageExercises(prev => ({
       ...prev,
-      [stageId]: [...(prev[stageId] ?? []), exerciseId],
+      [stageId]: [...(prev[stageId] ?? []), instance],
     }))
   }
 
-  function addMultipleToStage(stageId: string, exerciseIds: string[]) {
+  function addMultipleToStage(stageId: string, items: Array<{ exerciseId: string; customDuration: number | null }>) {
+    const newInstances: ExerciseInstance[] = items.map(item => ({
+      instanceId:     crypto.randomUUID(),
+      exerciseId:     item.exerciseId,
+      customDuration: item.customDuration,
+    }))
+    setStageExercises(prev => ({
+      ...prev,
+      [stageId]: [...(prev[stageId] ?? []), ...newInstances],
+    }))
+  }
+
+  function removeExerciseFromStage(stageId: string, instanceId: string) {
+    setStageExercises(prev => ({
+      ...prev,
+      [stageId]: (prev[stageId] ?? []).filter(i => i.instanceId !== instanceId),
+    }))
+  }
+
+  function duplicateInstance(stageId: string, instanceId: string) {
     setStageExercises(prev => {
-      const current = prev[stageId] ?? []
-      const toAdd = exerciseIds.filter(id => !current.includes(id))
-      if (toAdd.length === 0) return prev
-      return { ...prev, [stageId]: [...current, ...toAdd] }
+      const instances = prev[stageId] ?? []
+      const idx = instances.findIndex(i => i.instanceId === instanceId)
+      if (idx === -1) return prev
+      const copy: ExerciseInstance = { ...instances[idx], instanceId: crypto.randomUUID() }
+      const next = [...instances]
+      next.splice(idx + 1, 0, copy)
+      return { ...prev, [stageId]: next }
     })
   }
 
-  function removeExerciseFromStage(stageId: string, exerciseId: string) {
+  function editInstanceDuration(stageId: string, instanceId: string, value: number | null) {
     setStageExercises(prev => ({
       ...prev,
-      [stageId]: (prev[stageId] ?? []).filter(id => id !== exerciseId),
+      [stageId]: (prev[stageId] ?? []).map(i =>
+        i.instanceId === instanceId ? { ...i, customDuration: value } : i,
+      ),
     }))
   }
 
@@ -247,13 +198,13 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     setDragActiveId(null)
     if (!over || active.id === over.id) return
 
-    const stageId = findStageIdByExerciseId(active.id as string)
+    const stageId = findStageIdByInstanceId(active.id as string)
     if (!stageId) return
 
     setStageExercises(prev => {
       const items = [...(prev[stageId] ?? [])]
-      const oldIdx = items.indexOf(active.id as string)
-      const newIdx = items.indexOf(over.id as string)
+      const oldIdx = items.findIndex(i => i.instanceId === active.id)
+      const newIdx = items.findIndex(i => i.instanceId === over.id)
       if (oldIdx === -1 || newIdx === -1) return prev
       return { ...prev, [stageId]: arrayMove(items, oldIdx, newIdx) }
     })
@@ -287,10 +238,11 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
 
       let pos = 0
       const flatExercises = stages.flatMap(stage =>
-        (stageExercises[stage.id] ?? []).map(exerciseId => ({
-          exerciseId,
-          blockType: stage.name,
-          position:  pos++,
+        (stageExercises[stage.id] ?? []).map(instance => ({
+          exerciseId:     instance.exerciseId,
+          blockType:      stage.name,
+          position:       pos++,
+          customDuration: instance.customDuration,
         })),
       )
 
@@ -302,7 +254,11 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     })
   }
 
-  const dragActiveExercise = dragActiveId ? exerciseMap.get(dragActiveId) : undefined
+  // drag ghost
+  const allInstances = useMemo(() => Object.values(stageExercises).flat(), [stageExercises])
+  const dragActiveExercise = dragActiveId
+    ? exerciseMap.get(allInstances.find(i => i.instanceId === dragActiveId)?.exerciseId ?? '')
+    : undefined
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -420,7 +376,7 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
           </p>
           {totalDuration > 0 && (
             <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-              {totalDuration} min
+              {totalDuration.toFixed(0)} min
             </span>
           )}
         </div>
@@ -433,7 +389,8 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
         >
           <div className="flex flex-col gap-3">
             {stages.map(stage => {
-              const exerciseIds = stageExercises[stage.id] ?? []
+              const instances = stageExercises[stage.id] ?? []
+              const instanceIds = instances.map(i => i.instanceId)
               const dur = stageDuration(stage.id)
 
               return (
@@ -449,7 +406,7 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
                     />
                     <div className="flex items-center gap-2 shrink-0">
                       {dur > 0 && (
-                        <span className="text-[10px] text-muted-foreground">{dur} min</span>
+                        <span className="text-[10px] text-muted-foreground">{dur.toFixed(0)} min</span>
                       )}
                       {stages.length > 1 && (
                         <button
@@ -463,27 +420,30 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
                     </div>
                   </div>
 
-                  {/* Exercises */}
-                  <SortableContext items={exerciseIds} strategy={verticalListSortingStrategy}>
+                  {/* Exercise instances */}
+                  <SortableContext items={instanceIds} strategy={verticalListSortingStrategy}>
                     <div className="flex flex-col gap-1.5">
-                      {exerciseIds.map(eid => (
-                        <SortableExerciseCard
-                          key={eid}
-                          id={eid}
-                          exercise={exerciseMap.get(eid)}
-                          onRemove={() => removeExerciseFromStage(stage.id, eid)}
+                      {instances.map(inst => (
+                        <ExerciseInstanceCard
+                          key={inst.instanceId}
+                          instanceId={inst.instanceId}
+                          exercise={exerciseMap.get(inst.exerciseId)}
+                          customDuration={inst.customDuration}
+                          onRemove={() => removeExerciseFromStage(stage.id, inst.instanceId)}
+                          onDuplicate={() => duplicateInstance(stage.id, inst.instanceId)}
+                          onEditDuration={val => editInstanceDuration(stage.id, inst.instanceId, val)}
                         />
                       ))}
                     </div>
                   </SortableContext>
 
-                  {/* Add exercise button — always at bottom */}
+                  {/* Add exercise button */}
                   <button
                     type="button"
                     onClick={() => openSheet(stage.id)}
                     className={cn(
                       'w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-xs transition-colors',
-                      exerciseIds.length > 0 ? 'mt-2' : '',
+                      instances.length > 0 ? 'mt-2' : '',
                       'border-border text-muted-foreground hover:border-primary/50 hover:text-primary',
                     )}
                   >
@@ -570,12 +530,12 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
         onOpenChange={setSheetOpen}
         exercises={exercises}
         groups={groups}
-        selectedIds={new Set(activeStageId ? (stageExercises[activeStageId] ?? []) : [])}
+        selectedIds={new Set<string>()}
         onAdd={exerciseId => {
-          if (activeStageId) addExerciseToStage(activeStageId, exerciseId)
+          if (activeStageId) addExerciseToStage(activeStageId, exerciseId, null)
         }}
-        onAddGroup={exerciseIds => {
-          if (activeStageId) addMultipleToStage(activeStageId, exerciseIds)
+        onAddGroup={items => {
+          if (activeStageId) addMultipleToStage(activeStageId, items)
         }}
       />
     </div>

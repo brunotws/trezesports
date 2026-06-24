@@ -46,10 +46,11 @@ export async function cloneAsTemplate(sessionId: string): Promise<Session> {
   if (exercises.length > 0) {
     await supabase.from('session_exercises').insert(
       exercises.map(se => ({
-        session_id:  template.id,
-        exercise_id: se.exercise_id,
-        position:    se.position,
-        block_type:  se.block_type,
+        session_id:      template.id,
+        exercise_id:     se.exercise_id,
+        position:        se.position,
+        block_type:      se.block_type,
+        custom_duration: se.custom_duration ?? null,
       })),
     )
   }

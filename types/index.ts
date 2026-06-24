@@ -119,12 +119,20 @@ export interface Session {
 }
 
 export interface SessionExercise {
-  id:          string
-  session_id:  string
-  exercise_id: string
-  position:    number
-  block_type:  string | null
-  exercise?:   Exercise
+  id:              string
+  session_id:      string
+  exercise_id:     string
+  position:        number
+  block_type:      string | null
+  custom_duration: number | null
+  exercise?:       Exercise
+}
+
+// Client-only: represents one exercise slot in a session/routine builder (not a DB row)
+export interface ExerciseInstance {
+  instanceId:     string       // UUID used as DnD key; not stored in DB
+  exerciseId:     string
+  customDuration: number | null
 }
 
 export interface SessionAthlete {
@@ -173,11 +181,12 @@ export interface ExerciseGroup {
 }
 
 export interface ExerciseGroupItem {
-  id:          string
-  group_id:    string
-  exercise_id: string
-  position:    number
-  exercise?:   Exercise
+  id:              string
+  group_id:        string
+  exercise_id:     string
+  position:        number
+  custom_duration: number | null
+  exercise?:       Exercise
 }
 
 export interface SessionTemplateExercise {

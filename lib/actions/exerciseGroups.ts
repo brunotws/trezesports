@@ -11,9 +11,9 @@ import type { ExerciseGroup } from '@/types'
 
 export async function createExerciseGroupAction(
   name: string,
-  exerciseIds: string[] = [],
+  items: Array<{ exerciseId: string; customDuration?: number | null }> = [],
 ): Promise<ExerciseGroup> {
-  const group = await createExerciseGroup(name, exerciseIds)
+  const group = await createExerciseGroup(name, items)
   revalidatePath('/exercicios', 'layout')
   return group
 }

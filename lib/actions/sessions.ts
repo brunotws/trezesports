@@ -34,7 +34,7 @@ export async function addAthletesToSessionAction(
 
 export async function addExercisesToSessionAction(
   sessionId: string,
-  exercises: Array<{ exerciseId: string; blockType?: string; position: number }>,
+  exercises: Array<{ exerciseId: string; blockType?: string; position: number; customDuration?: number | null }>,
 ): Promise<void> {
   await addSessionExercises(sessionId, exercises)
 }

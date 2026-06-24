@@ -410,7 +410,7 @@ export default function SessionActions({ session, athletes, readinessMap, planne
             {dynamicStages.map(stage => {
               const exs = (exercisesByStage[stage.name] ?? []).sort((a, b) => a.position - b.position)
               if (exs.length === 0) return null
-              const stageDur = exs.reduce((s, e) => s + (e.exercise?.duration_min ?? 0), 0)
+              const stageDur = exs.reduce((s, e) => s + (e.custom_duration ?? e.exercise?.duration_min ?? 0), 0)
               return (
                 <div key={stage.id}>
                   <div className="flex items-center justify-between mb-1.5">
@@ -422,18 +422,21 @@ export default function SessionActions({ session, athletes, readinessMap, planne
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    {exs.map((se, i) => (
+                    {exs.map((se, i) => {
+                      const dur = se.custom_duration ?? se.exercise?.duration_min
+                      return (
                       <div key={se.id} className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card">
                         <span className="text-[10px] text-muted-foreground w-4 shrink-0">{i + 1}</span>
                         {se.exercise?.diagram_url && (
                           <img src={se.exercise.diagram_url} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
                         )}
                         <span className="text-xs flex-1 truncate">{se.exercise?.name ?? se.exercise_id}</span>
-                        {se.exercise?.duration_min && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(se.exercise.duration_min)}</span>
+                        {dur && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(dur)}</span>
                         )}
                       </div>
-                    ))}
+                    )})}
+
                   </div>
                 </div>
               )
@@ -451,15 +454,17 @@ export default function SessionActions({ session, athletes, readinessMap, planne
                     {block}
                   </p>
                   <div className="flex flex-col gap-1.5">
-                    {exs.map((se, i) => (
+                    {exs.map((se, i) => {
+                      const dur = se.custom_duration ?? se.exercise?.duration_min
+                      return (
                       <div key={se.id} className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm">
                         <span className="text-[10px] text-muted-foreground w-4">{i + 1}</span>
                         <span className="flex-1 truncate">{se.exercise?.name ?? se.exercise_id}</span>
-                        {se.exercise?.duration_min && (
-                          <span className="text-[10px] text-muted-foreground">{formatDuration(se.exercise.duration_min)}</span>
+                        {dur && (
+                          <span className="text-[10px] text-muted-foreground">{formatDuration(dur)}</span>
                         )}
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </div>
               )

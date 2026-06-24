@@ -18,7 +18,10 @@ export async function getExerciseGroups(): Promise<ExerciseGroup[]> {
   }
 }
 
-export async function createExerciseGroup(name: string, exerciseIds: string[]): Promise<ExerciseGroup> {
+export async function createExerciseGroup(
+  name: string,
+  items: Array<{ exerciseId: string; customDuration?: number | null }>,
+): Promise<ExerciseGroup> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('exercise_groups')
@@ -27,11 +30,12 @@ export async function createExerciseGroup(name: string, exerciseIds: string[]): 
     .single()
   if (error) throw new Error(error.message)
 
-  if (exerciseIds.length > 0) {
-    const rows = exerciseIds.map((exercise_id, i) => ({
-      group_id: data.id,
-      exercise_id,
-      position: i,
+  if (items.length > 0) {
+    const rows = items.map(({ exerciseId, customDuration }, i) => ({
+      group_id:        data.id,
+      exercise_id:     exerciseId,
+      position:        i,
+      custom_duration: customDuration ?? null,
     }))
     const { error: itemErr } = await supabase.from('exercise_group_items').insert(rows)
     if (itemErr) throw new Error(itemErr.message)

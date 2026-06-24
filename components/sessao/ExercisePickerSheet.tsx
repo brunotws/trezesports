@@ -25,7 +25,7 @@ interface Props {
   groups:         ExerciseGroup[]
   selectedIds:    Set<string>
   onAdd:          (exerciseId: string) => void
-  onAddGroup:     (exerciseIds: string[]) => void
+  onAddGroup:     (items: Array<{ exerciseId: string; customDuration: number | null }>) => void
 }
 
 export default function ExercisePickerSheet({
@@ -176,7 +176,7 @@ export default function ExercisePickerSheet({
                     </div>
                     <button
                       type="button"
-                      onClick={() => onAddGroup((g.items ?? []).map(i => i.exercise_id))}
+                      onClick={() => onAddGroup((g.items ?? []).map(i => ({ exerciseId: i.exercise_id, customDuration: i.custom_duration ?? null })))}
                       disabled={itemCount === 0}
                       className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold border border-primary/20 hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-default"
                     >
