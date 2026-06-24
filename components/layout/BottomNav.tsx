@@ -6,8 +6,8 @@ import { LayoutDashboard, CalendarDays, Dumbbell, Users, Trophy } from 'lucide-r
 
 const TABS = [
   { href: '/dashboard',  label: 'Início',      Icon: LayoutDashboard },
-  { href: '/planejador', label: 'Planejador',   Icon: CalendarDays },
-  { href: '/exercicios', label: 'Exercícios',   Icon: Dumbbell },
+  { href: '/planejador', label: 'Planejamento', Icon: CalendarDays },
+  { href: '/exercicios', label: 'Biblioteca',   Icon: Dumbbell },
   { href: '/atletas',    label: 'Atletas',      Icon: Users },
   { href: '/jogos',      label: 'Jogos',        Icon: Trophy },
 ]

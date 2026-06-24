@@ -46,21 +46,49 @@ export async function createSession(
   dayOfWeek: number,
   sessionNumber: number,
   sessionType: SessionType = 'free',
+  extra?: {
+    title?: string | null
+    scheduledTime?: string | null
+    category?: string | null
+    objective?: string | null
+    coachNotes?: string | null
+    teamIntensity?: number | null
+    stages?: { id: string; name: string }[]
+  },
 ): Promise<Session> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('sessions')
     .insert({
-      week_id: weekId,
-      day_of_week: dayOfWeek,
+      week_id:        weekId,
+      day_of_week:    dayOfWeek,
       session_number: sessionNumber,
-      session_type: sessionType,
+      session_type:   sessionType,
+      title:          extra?.title ?? null,
+      scheduled_time: extra?.scheduledTime ?? null,
+      category:       extra?.category ?? null,
+      objective:      extra?.objective ?? null,
+      coach_notes:    extra?.coachNotes ?? null,
+      team_intensity: extra?.teamIntensity ?? null,
+      stages:         extra?.stages ?? [],
     })
     .select()
     .single()
 
   if (error) throw new Error(error.message)
   return data
+}
+
+export async function updateSessionLogs(
+  sessionId: string,
+  values: { coach_notes?: string | null; team_intensity?: number | null },
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('sessions')
+    .update(values)
+    .eq('id', sessionId)
+  if (error) throw new Error(error.message)
 }
 
 export async function startSession(sessionId: string): Promise<void> {
@@ -111,6 +139,22 @@ export async function updateSessionType(
     .from('sessions')
     .update({ session_type: sessionType })
     .eq('id', sessionId)
+  if (error) throw new Error(error.message)
+}
+
+export async function addSessionExercises(
+  sessionId: string,
+  exercises: Array<{ exerciseId: string; blockType?: string; position: number }>,
+): Promise<void> {
+  if (exercises.length === 0) return
+  const supabase = createClient()
+  const rows = exercises.map(({ exerciseId, blockType, position }) => ({
+    session_id:  sessionId,
+    exercise_id: exerciseId,
+    block_type:  blockType ?? null,
+    position,
+  }))
+  const { error } = await supabase.from('session_exercises').insert(rows)
   if (error) throw new Error(error.message)
 }
 

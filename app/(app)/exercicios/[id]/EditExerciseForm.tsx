@@ -3,8 +3,9 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { createExerciseAction } from '@/lib/actions/exercises'
+import { updateExerciseAction, deleteExerciseAction } from '@/lib/actions/exercises'
 import { createClient } from '@/lib/supabase/client'
+import type { Exercise } from '@/types'
 
 const TYPES = [
   { value: 'tecnico',   label: 'Técnico' },
@@ -17,35 +18,35 @@ const LINHA_ATTRS   = ['Ball Control', 'Dribbling', 'Passing', 'Finishing', 'Mov
 const GOLEIRO_ATTRS = ['Ball Handling', 'Diving', 'Distribution', 'Positioning', 'Mindset']
 
 const DIFFICULTY_LABELS: Record<number, string> = {
-  1: 'Muito fácil',
-  2: 'Fácil',
-  3: 'Moderado',
-  4: 'Difícil',
-  5: 'Muito difícil',
+  1: 'Muito fácil', 2: 'Fácil', 3: 'Moderado', 4: 'Difícil', 5: 'Muito difícil',
 }
 
-export default function NewExerciseForm() {
+interface Props { exercise: Exercise }
+
+export default function EditExerciseForm({ exercise }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  const [name, setName]               = useState('')
-  const [description, setDescription] = useState('')
-  const [forGoalkeeper, setForGoalkeeper] = useState(false)
-  const [type, setType]               = useState('tecnico')
-  const [attrPrimary, setAttrPrimary] = useState('')
-  const [attrSecondary, setAttrSecondary] = useState('')
-  const [difficulty, setDifficulty]   = useState(3)
-  const [durationMin, setDurationMin] = useState(15)
-  const [diagramUrl, setDiagramUrl]   = useState<string | null>(null)
+  const [name, setName]               = useState(exercise.name)
+  const [description, setDescription] = useState(exercise.description ?? '')
+  const [forGoalkeeper, setForGoalkeeper] = useState(exercise.for_goalkeeper)
+  const [type, setType]               = useState(exercise.type)
+  const [attrPrimary, setAttrPrimary] = useState(exercise.attribute_target ?? '')
+  const [attrSecondary, setAttrSecondary] = useState(exercise.attr_secondary ?? '')
+  const [difficulty, setDifficulty]   = useState(exercise.fatigue_level)
+  const [durationMin, setDurationMin] = useState(exercise.duration_min ?? 15)
+  const [diagramUrl, setDiagramUrl]   = useState<string | null>(exercise.diagram_url ?? null)
   const [uploading, setUploading]     = useState(false)
-  const [progressao, setProgressao]   = useState('')
-  const [regressao, setRegressao]     = useState('')
-  const [espaco, setEspaco]           = useState('')
-  const [numCones, setNumCones]       = useState(0)
-  const [numColetes, setNumColetes]   = useState(0)
-  const [coresColetes, setCoresColetes] = useState(1)
-  const [numBolas, setNumBolas]       = useState(0)
+  const [progressao, setProgressao]   = useState(exercise.progressao ?? '')
+  const [regressao, setRegressao]     = useState(exercise.regressao ?? '')
+  const [espaco, setEspaco]           = useState(exercise.espaco_necessario ?? '')
+  const [numCones, setNumCones]       = useState(exercise.num_cones ?? 0)
+  const [numColetes, setNumColetes]   = useState(exercise.num_coletes ?? 0)
+  const [coresColetes, setCoresColetes] = useState(exercise.cores_coletes ?? 1)
+  const [numBolas, setNumBolas]       = useState(exercise.num_bolas ?? 0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const availableAttrs = forGoalkeeper ? GOLEIRO_ATTRS : LINHA_ATTRS
 
   async function handleImageUpload(file: File) {
     setUploading(true)
@@ -59,19 +60,17 @@ export default function NewExerciseForm() {
       if (error) throw error
       const { data } = supabase.storage.from('exercise-diagrams').getPublicUrl(path)
       setDiagramUrl(data.publicUrl)
-    } catch (e) {
+    } catch {
       alert('Erro ao fazer upload da imagem.')
     } finally {
       setUploading(false)
     }
   }
 
-  const availableAttrs = forGoalkeeper ? GOLEIRO_ATTRS : LINHA_ATTRS
-
-  function handleSubmit() {
+  function handleSave() {
     if (!name.trim()) return
     startTransition(async () => {
-      await createExerciseAction({
+      await updateExerciseAction(exercise.id, {
         name: name.trim(),
         description: description || null,
         attribute_target: attrPrimary || null,
@@ -93,6 +92,14 @@ export default function NewExerciseForm() {
     })
   }
 
+  function handleDelete() {
+    if (!confirm(`Excluir "${exercise.name}"? Esta ação não pode ser desfeita.`)) return
+    startTransition(async () => {
+      await deleteExerciseAction(exercise.id)
+      router.push('/exercicios')
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6 px-4 py-6">
 
@@ -102,7 +109,6 @@ export default function NewExerciseForm() {
         <input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Nome do exercício"
           className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
@@ -114,7 +120,6 @@ export default function NewExerciseForm() {
           value={description}
           onChange={e => setDescription(e.target.value)}
           rows={2}
-          placeholder="Detalhes opcionais…"
           className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
         />
       </div>
@@ -127,10 +132,7 @@ export default function NewExerciseForm() {
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) handleImageUpload(file)
-          }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f) }}
         />
         {diagramUrl ? (
           <div className="relative rounded-xl overflow-hidden border border-border bg-muted aspect-video">
@@ -148,16 +150,10 @@ export default function NewExerciseForm() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex flex-col items-center gap-2 py-8 rounded-xl border border-dashed border-border bg-card text-muted-foreground text-sm transition-colors hover:border-primary/40 disabled:opacity-50"
+            className="flex flex-col items-center gap-2 py-8 rounded-xl border border-dashed border-border bg-card text-muted-foreground text-sm hover:border-primary/40 disabled:opacity-50"
           >
-            {uploading ? (
-              <span>Enviando…</span>
-            ) : (
-              <>
-                <span className="text-2xl">🖼️</span>
-                <span>Toque para adicionar imagem</span>
-                <span className="text-xs opacity-60">PNG, JPG, GIF</span>
-              </>
+            {uploading ? <span>Enviando…</span> : (
+              <><span className="text-2xl">🖼️</span><span>Toque para adicionar imagem</span></>
             )}
           </button>
         )}
@@ -171,11 +167,7 @@ export default function NewExerciseForm() {
             <button
               key={String(gk)}
               type="button"
-              onClick={() => {
-                setForGoalkeeper(gk)
-                setAttrPrimary('')
-                setAttrSecondary('')
-              }}
+              onClick={() => { setForGoalkeeper(gk); setAttrPrimary(''); setAttrSecondary('') }}
               className={`flex items-center gap-2 py-2.5 px-3 rounded-lg border text-sm font-medium transition-colors ${
                 forGoalkeeper === gk
                   ? 'border-primary/40 bg-primary/10 text-foreground'
@@ -194,18 +186,11 @@ export default function NewExerciseForm() {
         <label className="text-sm font-medium">Tipo</label>
         <div className="grid grid-cols-4 gap-1.5">
           {TYPES.map(t => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setType(t.value)}
+            <button key={t.value} type="button" onClick={() => setType(t.value as Exercise['type'])}
               className={`py-2 rounded-md border text-xs font-medium transition-colors ${
-                type === t.value
-                  ? 'border-primary/40 bg-primary/10 text-foreground'
-                  : 'border-border bg-card text-muted-foreground'
+                type === t.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground'
               }`}
-            >
-              {t.label}
-            </button>
+            >{t.label}</button>
           ))}
         </div>
       </div>
@@ -215,18 +200,11 @@ export default function NewExerciseForm() {
         <label className="text-sm font-medium">Atributo primário</label>
         <div className="flex flex-wrap gap-1.5">
           {availableAttrs.map(a => (
-            <button
-              key={a}
-              type="button"
-              onClick={() => setAttrPrimary(a === attrPrimary ? '' : a)}
+            <button key={a} type="button" onClick={() => setAttrPrimary(a === attrPrimary ? '' : a)}
               className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
-                attrPrimary === a
-                  ? 'border-primary/40 bg-primary/10 text-foreground'
-                  : 'border-border bg-card text-muted-foreground'
+                attrPrimary === a ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground'
               }`}
-            >
-              {a}
-            </button>
+            >{a}</button>
           ))}
         </div>
       </div>
@@ -236,18 +214,11 @@ export default function NewExerciseForm() {
         <label className="text-sm font-medium">Atributo secundário <span className="text-muted-foreground font-normal">(opcional)</span></label>
         <div className="flex flex-wrap gap-1.5">
           {availableAttrs.filter(a => a !== attrPrimary).map(a => (
-            <button
-              key={a}
-              type="button"
-              onClick={() => setAttrSecondary(a === attrSecondary ? '' : a)}
+            <button key={a} type="button" onClick={() => setAttrSecondary(a === attrSecondary ? '' : a)}
               className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
-                attrSecondary === a
-                  ? 'border-primary/40 bg-primary/10 text-foreground'
-                  : 'border-border bg-card text-muted-foreground'
+                attrSecondary === a ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground'
               }`}
-            >
-              {a}
-            </button>
+            >{a}</button>
           ))}
         </div>
       </div>
@@ -258,14 +229,8 @@ export default function NewExerciseForm() {
           <label className="text-sm font-medium">Dificuldade</label>
           <span className="text-sm font-bold">{difficulty} <span className="text-xs text-muted-foreground font-normal">— {DIFFICULTY_LABELS[difficulty]}</span></span>
         </div>
-        <input
-          type="range"
-          min={1}
-          max={5}
-          value={difficulty}
-          onChange={e => setDifficulty(Number(e.target.value))}
-          className="w-full accent-primary"
-        />
+        <input type="range" min={1} max={5} value={difficulty}
+          onChange={e => setDifficulty(Number(e.target.value))} className="w-full accent-primary" />
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span>1 — Muito fácil</span><span>3 — Moderado</span><span>5 — Muito difícil</span>
         </div>
@@ -277,15 +242,8 @@ export default function NewExerciseForm() {
           <label className="text-sm font-medium">Duração</label>
           <span className="text-sm font-bold">{durationMin} min</span>
         </div>
-        <input
-          type="range"
-          min={5}
-          max={90}
-          step={5}
-          value={durationMin}
-          onChange={e => setDurationMin(Number(e.target.value))}
-          className="w-full accent-primary"
-        />
+        <input type="range" min={5} max={90} step={5} value={durationMin}
+          onChange={e => setDurationMin(Number(e.target.value))} className="w-full accent-primary" />
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span>5 min</span><span>45 min</span><span>90 min</span>
         </div>
@@ -297,24 +255,16 @@ export default function NewExerciseForm() {
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Progressão <span className="text-muted-foreground font-normal text-xs">— como dificultar</span></label>
-          <textarea
-            value={progressao}
-            onChange={e => setProgressao(e.target.value)}
-            rows={2}
+          <textarea value={progressao} onChange={e => setProgressao(e.target.value)} rows={2}
             placeholder="Ex: limitar para 2 toques, adicionar pressão defensiva…"
-            className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-          />
+            className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Regressão <span className="text-muted-foreground font-normal text-xs">— como facilitar</span></label>
-          <textarea
-            value={regressao}
-            onChange={e => setRegressao(e.target.value)}
-            rows={2}
+          <textarea value={regressao} onChange={e => setRegressao(e.target.value)} rows={2}
             placeholder="Ex: adicionar jogador coringa, ampliar o espaço…"
-            className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-          />
+            className="w-full rounded-lg border border-input bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
         </div>
       </section>
 
@@ -326,18 +276,10 @@ export default function NewExerciseForm() {
           <label className="text-sm font-medium">Espaço necessário</label>
           <div className="grid grid-cols-3 gap-2">
             {['1/4 de Quadra', 'Meia Quadra', 'Quadra Inteira'].map(s => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setEspaco(espaco === s ? '' : s)}
+              <button key={s} type="button" onClick={() => setEspaco(espaco === s ? '' : s)}
                 className={`py-2 px-1 rounded-lg border text-xs font-medium text-center transition-colors ${
-                  espaco === s
-                    ? 'border-primary/40 bg-primary/10 text-foreground'
-                    : 'border-border bg-card text-muted-foreground'
-                }`}
-              >
-                {s}
-              </button>
+                  espaco === s ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground'
+                }`}>{s}</button>
             ))}
           </div>
         </div>
@@ -391,13 +333,16 @@ export default function NewExerciseForm() {
         </div>
       </section>
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={isPending || !name.trim()}
+      <button type="button" onClick={handleSave} disabled={isPending || !name.trim()}
         className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-50"
       >
-        {isPending ? 'Salvando…' : 'Criar exercício'}
+        {isPending ? 'Salvando…' : 'Salvar alterações'}
+      </button>
+
+      <button type="button" onClick={handleDelete} disabled={isPending}
+        className="w-full py-3 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 text-sm font-medium disabled:opacity-50"
+      >
+        Excluir exercício
       </button>
     </div>
   )

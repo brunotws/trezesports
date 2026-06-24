@@ -25,12 +25,6 @@ export async function createAthlete(values: {
   modality?: string
   turma?: string | null
   resting_hr?: number | null
-  attr_passe?: number | null
-  attr_dominio?: number | null
-  attr_scan?: number | null
-  attr_decisao?: number | null
-  attr_mobilidade?: number | null
-  attr_finalizacao?: number | null
 }): Promise<Athlete> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -69,6 +63,50 @@ export async function getAthleteSessionHistory(
     .order('created_at', { ascending: false })
     .limit(limit)
   return (data as typeof data & { session: { day_of_week: number; session_number: number; status: string; session_type: string; actual_rpe: number | null; week: { start_date: string } } }[]) ?? []
+}
+
+export async function getAthleteCalendarSessions(
+  athleteId: string,
+): Promise<Array<{
+  sessionId:     string
+  date:          string
+  sessionNumber: number
+  title:         string | null
+  category:      string | null
+}>> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('session_athletes')
+    .select(`
+      session:sessions(
+        id,
+        day_of_week,
+        session_number,
+        title,
+        category,
+        week:weeks(start_date)
+      )
+    `)
+    .eq('athlete_id', athleteId)
+
+  if (!data) return []
+
+  return (data as any[])
+    .map(row => {
+      const s = row.session
+      if (!s?.week?.start_date) return null
+      const weekStart = new Date(s.week.start_date + 'T00:00:00')
+      weekStart.setDate(weekStart.getDate() + s.day_of_week)
+      return {
+        sessionId:     s.id as string,
+        date:          weekStart.toISOString().split('T')[0],
+        sessionNumber: s.session_number as number,
+        title:         (s.title ?? null) as string | null,
+        category:      (s.category ?? null) as string | null,
+      }
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export async function getDailyLoadHistory(

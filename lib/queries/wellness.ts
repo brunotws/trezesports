@@ -32,7 +32,7 @@ export async function getWellnessRange(
 export async function upsertWellness(
   athleteId: string,
   date: string,
-  values: { fatigue: number; sleep_quality: number; doms: number; mood: number; resting_hr?: number },
+  values: { fatigue: number; sleep_quality: number; doms: number; mood: number; resting_hr?: number; nutrition_score?: number },
 ): Promise<DailyWellness> {
   const supabase = createClient()
   const { data, error } = await supabase

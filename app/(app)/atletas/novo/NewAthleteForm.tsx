@@ -4,36 +4,15 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAthleteAction } from '@/lib/actions/athletes'
 
-const POSITIONS = ['Goleiro', 'Defensor', 'Lateral', 'Volante', 'Meia', 'Atacante', 'Ala', 'Pivô']
-
-const ATTRS = [
-  { key: 'attr_passe',       label: 'Passe' },
-  { key: 'attr_dominio',     label: 'Domínio' },
-  { key: 'attr_scan',        label: 'Visão' },
-  { key: 'attr_decisao',     label: 'Decisão' },
-  { key: 'attr_mobilidade',  label: 'Mobilidade' },
-  { key: 'attr_finalizacao', label: 'Finalização' },
-] as const
-
-type AttrKey = (typeof ATTRS)[number]['key']
-
 export default function NewAthleteForm() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
-  const [position, setPosition] = useState('')
+  const [position, setPosition] = useState<'Goleiro' | 'Linha' | ''>('')
   const [modality, setModality] = useState<'football' | 'futsal'>('football')
   const [turma, setTurma] = useState('')
-  const [attrs, setAttrs] = useState<Record<AttrKey, number>>({
-    attr_passe: 10, attr_dominio: 10, attr_scan: 10,
-    attr_decisao: 10, attr_mobilidade: 10, attr_finalizacao: 10,
-  })
-
-  function setAttr(key: AttrKey, v: number) {
-    setAttrs(prev => ({ ...prev, [key]: Math.min(20, Math.max(1, v)) }))
-  }
 
   function handleSubmit() {
     if (!name.trim()) return
@@ -44,7 +23,6 @@ export default function NewAthleteForm() {
         position: position || null,
         modality,
         turma: turma || null,
-        ...attrs,
       })
       router.push(`/atletas/${id}`)
     })
@@ -52,9 +30,8 @@ export default function NewAthleteForm() {
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6">
-      {/* Dados básicos */}
       <section className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dados básicos</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dados pessoais</p>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Nome *</label>
@@ -86,67 +63,47 @@ export default function NewAthleteForm() {
             />
           </div>
         </div>
+      </section>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Posição</label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {POSITIONS.map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPosition(p)}
-                className={`py-1.5 rounded-md border text-xs font-medium transition-colors ${
-                  position === p
-                    ? 'border-primary/40 bg-primary/10 text-foreground'
-                    : 'border-border bg-card text-muted-foreground'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Modalidade</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(['football', 'futsal'] as const).map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setModality(m)}
-                className={`py-2 rounded-md border text-sm font-medium transition-colors ${
-                  modality === m
-                    ? 'border-primary/40 bg-primary/10 text-foreground'
-                    : 'border-border bg-card text-muted-foreground'
-                }`}
-              >
-                {m === 'football' ? 'Futebol' : 'Futsal'}
-              </button>
-            ))}
-          </div>
+      <section className="flex flex-col gap-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Posição</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(['Linha', 'Goleiro'] as const).map(p => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPosition(p)}
+              className={`flex flex-col items-center gap-1.5 py-4 rounded-xl border text-sm font-medium transition-colors ${
+                position === p
+                  ? 'border-primary/40 bg-primary/10 text-foreground'
+                  : 'border-border bg-card text-muted-foreground'
+              }`}
+            >
+              <span className="text-2xl">{p === 'Goleiro' ? '🧤' : '⚽'}</span>
+              <span>{p}</span>
+            </button>
+          ))}
         </div>
       </section>
 
-      {/* Atributos FM */}
       <section className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Atributos FM (1–20)
-        </p>
-        {ATTRS.map(({ key, label }) => (
-          <div key={key} className="flex items-center gap-3">
-            <span className="w-24 text-sm">{label}</span>
-            <input
-              type="range"
-              min={1}
-              max={20}
-              value={attrs[key]}
-              onChange={e => setAttr(key, Number(e.target.value))}
-              className="flex-1 accent-primary"
-            />
-            <span className="w-6 text-right text-sm font-bold tabular-nums">{attrs[key]}</span>
-          </div>
-        ))}
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Modalidade</p>
+        <div className="grid grid-cols-2 gap-2">
+          {(['football', 'futsal'] as const).map(m => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setModality(m)}
+              className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                modality === m
+                  ? 'border-primary/40 bg-primary/10 text-foreground'
+                  : 'border-border bg-card text-muted-foreground'
+              }`}
+            >
+              {m === 'football' ? 'Futebol' : 'Futsal'}
+            </button>
+          ))}
+        </div>
       </section>
 
       <button

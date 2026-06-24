@@ -1,13 +1,24 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getAthlete, getAthleteSessionHistory, getDailyLoadHistory } from '@/lib/queries/athletes'
+import { getAthlete, getAthleteSessionHistory, getDailyLoadHistory, getAthleteCalendarSessions } from '@/lib/queries/athletes'
 import { getAthleteACWR } from '@/lib/queries/analytics'
 import { getTodayWellness } from '@/lib/queries/wellness'
 import AttributeRadar from '@/components/atletas/AttributeRadar'
 import WellnessForm from '@/components/atletas/WellnessForm'
+import AthleteCalendar from '@/components/atletas/AthleteCalendar'
 import ACWRChart from '@/components/dashboard/ACWRChart'
 import PageHeader from '@/components/layout/PageHeader'
 import { SESSION_TYPE_LABELS } from '@/lib/engine/morphocycle'
+import type { Athlete } from '@/types'
+
+function hasEvaluation(athlete: Athlete): boolean {
+  const keys: (keyof Athlete)[] = [
+    'attr_ball_control', 'attr_dribbling', 'attr_passing', 'attr_finishing',
+    'attr_movement', 'attr_body_positioning', 'attr_scanning', 'attr_decisions',
+    'attr_ball_handling', 'attr_diving', 'attr_distribution', 'attr_positioning', 'attr_mindset',
+  ]
+  return keys.some(k => athlete[k] != null)
+}
 
 interface Props {
   params: { id: string }
@@ -28,12 +39,13 @@ function acwrStatus(acwr: number | null): 'green' | 'yellow' | 'red' {
 
 export default async function AtletaPerfilPage({ params }: Props) {
   const { id } = params
-  const [athlete, acwrRow, todayWellness, loads, history] = await Promise.all([
+  const [athlete, acwrRow, todayWellness, loads, history, calendarSessions] = await Promise.all([
     getAthlete(id),
     getAthleteACWR(id),
     getTodayWellness(id),
     getDailyLoadHistory(id, 28),
     getAthleteSessionHistory(id, 8),
+    getAthleteCalendarSessions(id),
   ])
 
   if (!athlete) notFound()
@@ -61,12 +73,31 @@ export default async function AtletaPerfilPage({ params }: Props) {
 
         {/* Radar de atributos */}
         <section>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            Atributos FM
-          </p>
-          <div className="rounded-xl border border-border bg-card py-2">
-            <AttributeRadar athlete={athlete} size={220} />
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Atributos
+            </p>
+            <Link
+              href={`/atletas/${id}/avaliacao`}
+              className="text-xs text-primary font-medium"
+            >
+              {hasEvaluation(athlete) ? 'Re-avaliar' : 'Iniciar avaliação →'}
+            </Link>
           </div>
+          {hasEvaluation(athlete) ? (
+            <div className="rounded-xl border border-border bg-card py-2">
+              <AttributeRadar athlete={athlete} size={220} />
+            </div>
+          ) : (
+            <Link
+              href={`/atletas/${id}/avaliacao`}
+              className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/50 py-8 text-center"
+            >
+              <span className="text-2xl">📋</span>
+              <p className="text-sm font-medium">Avaliação pendente</p>
+              <p className="text-xs text-muted-foreground">Toque para iniciar a avaliação de atributos</p>
+            </Link>
+          )}
         </section>
 
         {/* Curva de carga 28 dias */}
@@ -92,6 +123,22 @@ export default async function AtletaPerfilPage({ params }: Props) {
           </p>
           <div className="rounded-xl border border-border bg-card p-4">
             <WellnessForm athleteId={id} initial={todayWellness} />
+          </div>
+        </section>
+
+        {/* Calendário de treinos */}
+        <section>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            Calendário de Treinos
+          </p>
+          <div className="rounded-xl border border-border bg-card p-4">
+            {calendarSessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma sessão vinculada a este atleta.
+              </p>
+            ) : (
+              <AthleteCalendar sessions={calendarSessions} />
+            )}
           </div>
         </section>
 

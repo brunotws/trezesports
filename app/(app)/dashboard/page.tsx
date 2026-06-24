@@ -115,6 +115,20 @@ export default async function DashboardPage() {
             <span className="text-[11px] text-muted-foreground">Grade FM semanal</span>
           </Link>
           <Link
+            href="/exercicios"
+            className="flex flex-col gap-1 px-4 py-3 rounded-xl border border-border bg-card text-sm"
+          >
+            <span className="font-medium">Biblioteca</span>
+            <span className="text-[11px] text-muted-foreground">Treinos e exercícios</span>
+          </Link>
+          <Link
+            href="/atletas/novo"
+            className="flex flex-col gap-1 px-4 py-3 rounded-xl border border-border bg-card text-sm"
+          >
+            <span className="font-medium">Novo atleta</span>
+            <span className="text-[11px] text-muted-foreground">Cadastrar aluno</span>
+          </Link>
+          <Link
             href="/jogos/novo"
             className="flex flex-col gap-1 px-4 py-3 rounded-xl border border-border bg-card text-sm"
           >

@@ -5,8 +5,14 @@
 export type ExerciseType    = 'tecnico' | 'cognitivo' | 'fisico' | 'misto'
 export type SessionStatus   = 'planejada' | 'em_andamento' | 'encerrada'
 export type SessionType     = 'MD+1' | 'MD+2' | 'MD-4' | 'MD-3' | 'MD-2' | 'MD-1' | 'MD' | 'free'
+export type BlockType       = 'Aquecimento' | 'Parte Analítica' | 'Jogo Condicionado'
+
+export interface Stage {
+  id:   string
+  name: string
+}
 export type GameType        = 'amistoso' | 'campeonato'
-export type PositionType    = 'Goleiro' | 'Defensor' | 'Lateral' | 'Volante' | 'Meia' | 'Atacante' | 'Ala' | 'Pivô'
+export type PositionType    = 'Goleiro' | 'Linha'
 export type ModalityType    = 'football' | 'futsal'
 export type SurfaceType     = 'grass' | 'synthetic' | 'futsal_court' | 'gym'
 export type ReadinessStatus = 'green' | 'yellow' | 'red'
@@ -16,33 +22,43 @@ export type ReadinessStatus = 'green' | 'yellow' | 'red'
 // -------------------------------------------------------------
 
 export interface Athlete {
-  id:               string
-  name:             string
-  birth_date:       string | null
-  position:         PositionType | null
-  modality:         ModalityType
-  turma:            string | null
-  resting_hr:       number | null
-  attr_passe:       number | null
-  attr_dominio:     number | null
-  attr_scan:        number | null
-  attr_decisao:     number | null
-  attr_mobilidade:  number | null
-  attr_finalizacao: number | null
-  created_at:       string
+  id:                    string
+  name:                  string
+  birth_date:            string | null
+  position:              PositionType | null
+  modality:              ModalityType
+  turma:                 string | null
+  resting_hr:            number | null
+  // Linha attributes
+  attr_ball_control:     number | null
+  attr_dribbling:        number | null
+  attr_passing:          number | null
+  attr_finishing:        number | null
+  attr_movement:         number | null
+  attr_body_positioning: number | null
+  attr_scanning:         number | null
+  attr_decisions:        number | null
+  // Goleiro attributes
+  attr_ball_handling:    number | null
+  attr_diving:           number | null
+  attr_distribution:     number | null
+  attr_positioning:      number | null
+  attr_mindset:          number | null
+  created_at:            string
 }
 
 export interface DailyWellness {
-  id:             string
-  athlete_id:     string
-  date:           string
-  fatigue:        number  // 1–5 (5 = ótimo)
-  sleep_quality:  number
-  doms:           number
-  mood:           number
-  resting_hr:     number | null
-  wellness_total: number
-  created_at:     string
+  id:              string
+  athlete_id:      string
+  date:            string
+  fatigue:         number  // 1–5 (5 = ótimo)
+  sleep_quality:   number
+  doms:            number
+  mood:            number
+  nutrition_score: number | null
+  resting_hr:      number | null
+  wellness_total:  number
+  created_at:      string
 }
 
 export interface Exercise {
@@ -50,8 +66,21 @@ export interface Exercise {
   name:                       string
   description:                string | null
   attribute_target:           string | null
+  attr_secondary:             string | null
   type:                       ExerciseType
   fatigue_level:              number
+  for_goalkeeper:             boolean
+  duration_min:               number | null
+  diagram_url:                string | null
+  // Intervenção
+  progressao:                 string | null
+  regressao:                  string | null
+  // Logística
+  espaco_necessario:          string | null
+  num_cones:                  number | null
+  num_coletes:                number | null
+  cores_coletes:              number | null
+  num_bolas:                  number | null
   is_eccentric:               boolean
   contraindicated_doms_below: number | null
   substitute_exercise_id:     string | null
@@ -76,6 +105,16 @@ export interface Session {
   blocked_reason:       string | null
   actual_rpe:           number | null
   actual_duration_min:  number | null
+  // Planejamento
+  title:                string | null
+  scheduled_time:       string | null
+  category:             string | null
+  objective:            string | null
+  // Diário de bordo
+  coach_notes:          string | null
+  team_intensity:       number | null
+  // Dynamic stages (new — requires migration 0002)
+  stages:               Stage[] | undefined
   created_at:           string
 }
 
@@ -84,6 +123,7 @@ export interface SessionExercise {
   session_id:  string
   exercise_id: string
   position:    number
+  block_type:  string | null
   exercise?:   Exercise
 }
 
@@ -119,6 +159,21 @@ export interface SessionTemplate {
   description: string | null
   created_at:  string
   exercises?:  SessionTemplateExercise[]
+}
+
+export interface ExerciseGroup {
+  id:         string
+  name:       string
+  created_at: string
+  items?:     ExerciseGroupItem[]
+}
+
+export interface ExerciseGroupItem {
+  id:          string
+  group_id:    string
+  exercise_id: string
+  position:    number
+  exercise?:   Exercise
 }
 
 export interface SessionTemplateExercise {
@@ -179,10 +234,11 @@ export interface WeeklyStats {
 // -------------------------------------------------------------
 
 export interface WellnessInput {
-  fatigue:      number  // 1–5
-  sleepQuality: number
-  doms:         number
-  mood:         number
+  fatigue:        number  // 1–5
+  sleepQuality:   number
+  doms:           number
+  mood:           number
+  nutritionScore?: number
 }
 
 export interface PrescriptionAdaptation {
@@ -233,6 +289,6 @@ export interface GridCell {
 export interface AthleteReadiness {
   athleteId:   string
   status:      'green' | 'yellow' | 'red' | null
-  wellness:    { fatigue: number; sleep_quality: number; doms: number; mood: number } | null
+  wellness:    { fatigue: number; sleep_quality: number; doms: number; mood: number; nutrition_score?: number | null } | null
   prescriptions: PrescriptionAdaptation[]
 }

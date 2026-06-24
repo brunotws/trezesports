@@ -4,17 +4,18 @@ import { getTodayWellness } from '@/lib/queries/wellness'
 import { buildPrescriptionAdaptations } from '@/lib/engine/prescriptions'
 import PageHeader from '@/components/layout/PageHeader'
 import SessionActions from '@/components/sessao/SessionActions'
-import type { AthleteReadiness } from '@/types'
+import type { AthleteReadiness, DailyWellness } from '@/types'
 
 interface Props {
   params: { sessionId: string }
 }
 
-function wellnessStatus(w: { fatigue: number; sleep_quality: number; doms: number; mood: number } | null): 'green' | 'yellow' | 'red' | null {
+function wellnessStatus(w: { fatigue: number; sleep_quality: number; doms: number; mood: number; nutrition_score?: number | null } | null): 'green' | 'yellow' | 'red' | null {
   if (!w) return null
-  const total = w.fatigue + w.sleep_quality + w.doms + w.mood
-  if (total > 15) return 'green'
-  if (total >= 10) return 'yellow'
+  const metrics = [w.fatigue, w.sleep_quality, w.doms, w.mood, w.nutrition_score].filter((v): v is number => v != null)
+  const avg = metrics.reduce((a, b) => a + b, 0) / metrics.length
+  if (avg > 3.75) return 'green'
+  if (avg >= 2.5) return 'yellow'
   return 'red'
 }
 
@@ -36,17 +37,21 @@ export default async function SessionPage({ params }: Props) {
     athletes.map(sa => getTodayWellness(sa.athlete_id)),
   )
 
+  const wellnessMap: Record<string, DailyWellness | null> = {}
+  athletes.forEach((sa, i) => { wellnessMap[sa.athlete_id] = wellnessResults[i] })
+
   const readinessMap: AthleteReadiness[] = athletes.map((sa, i) => {
     const w = wellnessResults[i]
     const wellness = w
-      ? { fatigue: w.fatigue, sleep_quality: w.sleep_quality, doms: w.doms, mood: w.mood }
+      ? { fatigue: w.fatigue, sleep_quality: w.sleep_quality, doms: w.doms, mood: w.mood, nutrition_score: w.nutrition_score }
       : null
     const prescriptions = wellness
       ? buildPrescriptionAdaptations({
-          fatigue:      wellness.fatigue,
-          sleepQuality: wellness.sleep_quality,
-          doms:         wellness.doms,
-          mood:         wellness.mood,
+          fatigue:        wellness.fatigue,
+          sleepQuality:   wellness.sleep_quality,
+          doms:           wellness.doms,
+          mood:           wellness.mood,
+          nutritionScore: wellness.nutrition_score ?? undefined,
         })
       : []
     return {
@@ -57,11 +62,14 @@ export default async function SessionPage({ params }: Props) {
     }
   })
 
+  const sessionTitle = session.title
+    ?? `Sessão ${session.session_number} · Dia ${session.day_of_week + 1}`
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <PageHeader
-        title={session.status.replace('_', ' ')}
-        subtitle={`Sessão ${session.session_number} · Dia ${session.day_of_week + 1}`}
+        title={sessionTitle}
+        subtitle={[session.category, session.objective].filter(Boolean).join(' · ') || session.status.replace('_', ' ')}
         backHref="/planejador"
       />
       <SessionActions
@@ -69,6 +77,7 @@ export default async function SessionPage({ params }: Props) {
         athletes={athletes}
         readinessMap={readinessMap}
         plannedLoad={plannedLoad}
+        wellnessMap={wellnessMap}
       />
     </div>
   )

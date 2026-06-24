@@ -45,6 +45,13 @@ const RULES: AdaptationRule[] = [
     replacement:      'Jogo lúdico 3×3 sem placar, livre',
     reason:           'Cortisol alto + carga intensa = catabolismo e risco de lesão por falta de foco.',
   },
+  {
+    condition: w => (w.nutritionScore ?? 5) <= 2,
+    trigger:          'Combustível ≤ 2 — estado nutricional baixo',
+    originalExercise: 'Sessão de alta intensidade metabólica',
+    replacement:      'Técnica individual de baixo custo energético — passes 2-toques sem marcação',
+    reason:           'Risco de hipoglicemia e fadiga precoce. Reduzir intensidade metabólica preserva o padrão motor e previne queda brusca de rendimento.',
+  },
 ]
 
 export function buildPrescriptionAdaptations(wellness: WellnessInput): PrescriptionAdaptation[] {

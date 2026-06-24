@@ -11,12 +11,6 @@ type AthleteInput = {
   modality?: string
   turma?: string | null
   resting_hr?: number | null
-  attr_passe?: number | null
-  attr_dominio?: number | null
-  attr_scan?: number | null
-  attr_decisao?: number | null
-  attr_mobilidade?: number | null
-  attr_finalizacao?: number | null
 }
 
 export async function createAthleteAction(values: AthleteInput): Promise<{ id: string }> {

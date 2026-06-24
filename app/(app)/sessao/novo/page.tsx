@@ -1,4 +1,6 @@
 import { getAthletes } from '@/lib/queries/athletes'
+import { getExercises } from '@/lib/queries/exercises'
+import { getExerciseGroups } from '@/lib/queries/exerciseGroups'
 import PageHeader from '@/components/layout/PageHeader'
 import NewSessionForm from './NewSessionForm'
 
@@ -15,7 +17,11 @@ export default async function NovaSessionPage({ searchParams }: Props) {
     )
   }
 
-  const athletes = await getAthletes()
+  const [athletes, exercises, groups] = await Promise.all([
+    getAthletes(),
+    getExercises(),
+    getExerciseGroups(),
+  ])
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -27,7 +33,10 @@ export default async function NovaSessionPage({ searchParams }: Props) {
         weekId={weekId}
         day={Number(day)}
         sn={Number(sn)}
+        date={date ?? 'Sem data'}
         athletes={athletes}
+        exercises={exercises}
+        groups={groups}
       />
     </div>
   )

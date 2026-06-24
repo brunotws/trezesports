@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createSession, startSession, closeSession } from '@/lib/queries/sessions'
+import { createSession, startSession, closeSession, addSessionExercises, updateSessionLogs } from '@/lib/queries/sessions'
 import { addAthleteToSession, upsertSessionAthlete } from '@/lib/queries/sessionAthletes'
 import type { SessionType } from '@/types'
 
@@ -10,8 +10,17 @@ export async function createSessionAction(
   day: number,
   sn: number,
   sessionType: SessionType,
+  extra?: {
+    title?: string | null
+    scheduledTime?: string | null
+    category?: string | null
+    objective?: string | null
+    coachNotes?: string | null
+    teamIntensity?: number | null
+    stages?: { id: string; name: string }[]
+  },
 ): Promise<{ id: string }> {
-  const session = await createSession(weekId, day, sn, sessionType)
+  const session = await createSession(weekId, day, sn, sessionType, extra)
   revalidatePath('/planejador', 'layout')
   return { id: session.id }
 }
@@ -21,6 +30,13 @@ export async function addAthletesToSessionAction(
   athleteIds: string[],
 ): Promise<void> {
   await Promise.all(athleteIds.map(id => addAthleteToSession(sessionId, id)))
+}
+
+export async function addExercisesToSessionAction(
+  sessionId: string,
+  exercises: Array<{ exerciseId: string; blockType?: string; position: number }>,
+): Promise<void> {
+  await addSessionExercises(sessionId, exercises)
 }
 
 export async function startSessionAction(sessionId: string): Promise<void> {
@@ -34,6 +50,14 @@ export async function closeSessionAction(
   actualDurationMin: number,
 ): Promise<void> {
   await closeSession(sessionId, actualRpe, actualDurationMin)
+  revalidatePath(`/sessao/${sessionId}`)
+}
+
+export async function updateSessionLogsAction(
+  sessionId: string,
+  values: { coach_notes?: string | null; team_intensity?: number | null },
+): Promise<void> {
+  await updateSessionLogs(sessionId, values)
   revalidatePath(`/sessao/${sessionId}`)
 }
 

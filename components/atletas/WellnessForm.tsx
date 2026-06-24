@@ -11,10 +11,11 @@ interface Props {
 }
 
 const METRICS = [
-  { key: 'fatigue',       label: 'Energia', description: '1 = Esgotado · 5 = Descansado' },
-  { key: 'sleep_quality', label: 'Sono',    description: '1 = Péssimo · 5 = Ótimo' },
-  { key: 'doms',          label: 'Dores',   description: '1 = Muita dor · 5 = Sem dores' },
-  { key: 'mood',          label: 'Humor',   description: '1 = Péssimo · 5 = Excelente' },
+  { key: 'fatigue',          label: 'Energia',     description: '1 = Esgotado · 5 = Descansado' },
+  { key: 'sleep_quality',    label: 'Sono',        description: '1 = Péssimo · 5 = Ótimo' },
+  { key: 'doms',             label: 'Dores',       description: '1 = Muita dor · 5 = Sem dores' },
+  { key: 'mood',             label: 'Humor',       description: '1 = Péssimo · 5 = Excelente' },
+  { key: 'nutrition_score',  label: 'Combustível', description: '1 = Em jejum · 5 = Bem nutrido' },
 ] as const
 
 const BTN_COLORS: Record<number, string> = {
@@ -29,10 +30,11 @@ export default function WellnessForm({ athleteId, initial }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(!!initial)
   const [values, setValues] = useState({
-    fatigue:       initial?.fatigue ?? 3,
-    sleep_quality: initial?.sleep_quality ?? 3,
-    doms:          initial?.doms ?? 3,
-    mood:          initial?.mood ?? 3,
+    fatigue:          initial?.fatigue          ?? 3,
+    sleep_quality:    initial?.sleep_quality    ?? 3,
+    doms:             initial?.doms             ?? 3,
+    mood:             initial?.mood             ?? 3,
+    nutrition_score:  initial?.nutrition_score  ?? 3,
   })
 
   function set(key: keyof typeof values, v: number) {

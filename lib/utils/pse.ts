@@ -5,9 +5,10 @@ export function checkPseAlert(pse: number, plannedLoad: number): boolean {
 }
 
 export function getPseLabel(pse: number): string {
-  if (pse <= 3) return 'Leve'
-  if (pse <= 5) return 'Moderado'
-  if (pse <= 7) return 'Difícil'
-  if (pse <= 9) return 'Muito difícil'
+  if (pse === 0)  return 'Repouso'
+  if (pse <= 2)   return 'Muito Leve'
+  if (pse <= 4)   return 'Moderado'
+  if (pse <= 6)   return 'Pesado'
+  if (pse <= 8)   return 'Muito Pesado'
   return 'Máximo'
 }
