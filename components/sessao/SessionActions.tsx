@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils/duration'
 import { buildMorphocycleContext, SESSION_TYPE_LABELS, SESSION_TYPE_COLORS } from '@/lib/engine/morphocycle'
 import { buildPrescriptionAdaptations } from '@/lib/engine/prescriptions'
 import { startSessionAction, updateSessionLogsAction } from '@/lib/actions/sessions'
@@ -429,7 +430,7 @@ export default function SessionActions({ session, athletes, readinessMap, planne
                         )}
                         <span className="text-xs flex-1 truncate">{se.exercise?.name ?? se.exercise_id}</span>
                         {se.exercise?.duration_min && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{se.exercise.duration_min}m</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(se.exercise.duration_min)}</span>
                         )}
                       </div>
                     ))}
@@ -455,7 +456,7 @@ export default function SessionActions({ session, athletes, readinessMap, planne
                         <span className="text-[10px] text-muted-foreground w-4">{i + 1}</span>
                         <span className="flex-1 truncate">{se.exercise?.name ?? se.exercise_id}</span>
                         {se.exercise?.duration_min && (
-                          <span className="text-[10px] text-muted-foreground">{se.exercise.duration_min} min</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDuration(se.exercise.duration_min)}</span>
                         )}
                       </div>
                     ))}

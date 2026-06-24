@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, ArrowRight, Flag, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils/duration'
 import type { Session, SessionExercise } from '@/types'
 
 interface Props {
@@ -160,7 +161,7 @@ export default function LiveMode({ session, orderedExercises }: Props) {
           <div className="px-4 pt-4 pb-2">
             <h1 className="text-2xl font-bold leading-tight tracking-tight">{ex?.name ?? '—'}</h1>
             {hasDuration && (
-              <p className="text-xs text-muted-foreground mt-1">{ex!.duration_min} min</p>
+              <p className="text-xs text-muted-foreground mt-1">{formatDuration(ex!.duration_min)}</p>
             )}
           </div>
 

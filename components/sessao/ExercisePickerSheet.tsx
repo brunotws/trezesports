@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils/duration'
 import {
   Sheet,
   SheetContent,
@@ -125,7 +126,7 @@ export default function ExercisePickerSheet({
                           <span className="text-[10px] text-muted-foreground truncate">{ex.attribute_target}</span>
                         )}
                         {ex.duration_min && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{ex.duration_min}m</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(ex.duration_min)}</span>
                         )}
                       </div>
                     </div>

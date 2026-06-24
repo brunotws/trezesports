@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils/duration'
 import {
   DndContext,
   DragEndEvent,
@@ -86,7 +87,7 @@ function SortableExerciseCard({
       </div>
 
       {exercise.duration_min && (
-        <span className="text-[10px] text-muted-foreground shrink-0">{exercise.duration_min}m</span>
+        <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(exercise.duration_min)}</span>
       )}
 
       <button

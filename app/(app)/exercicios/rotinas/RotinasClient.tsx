@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils/duration'
 import { Plus, Trash2, ChevronDown, ChevronUp, X, BookMarked } from 'lucide-react'
 import { createExerciseGroupAction, deleteExerciseGroupAction } from '@/lib/actions/exerciseGroups'
 import type { Exercise, ExerciseGroup } from '@/types'
@@ -177,7 +178,7 @@ export default function RotinasClient({ exercises, initialGroups }: Props) {
                           {ex.type}
                         </span>
                         {ex.duration_min && (
-                          <span className="text-[10px] text-muted-foreground">{ex.duration_min}m</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDuration(ex.duration_min)}</span>
                         )}
                       </div>
                     </div>
@@ -308,7 +309,7 @@ export default function RotinasClient({ exercises, initialGroups }: Props) {
                             )}
                           </div>
                           {ex?.duration_min && (
-                            <span className="text-[10px] text-muted-foreground shrink-0">{ex.duration_min}m</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(ex.duration_min)}</span>
                           )}
                         </div>
                       )
