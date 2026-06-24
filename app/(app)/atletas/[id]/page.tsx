@@ -8,6 +8,7 @@ import WellnessForm from '@/components/atletas/WellnessForm'
 import AthleteCalendar from '@/components/atletas/AthleteCalendar'
 import ACWRChart from '@/components/dashboard/ACWRChart'
 import PageHeader from '@/components/layout/PageHeader'
+import DeleteAthleteButton from '@/components/atletas/DeleteAthleteButton'
 import { SESSION_TYPE_LABELS } from '@/lib/engine/morphocycle'
 import type { Athlete } from '@/types'
 
@@ -175,12 +176,15 @@ export default async function AtletaPerfilPage({ params }: Props) {
         )}
 
         {/* Ações */}
-        <Link
-          href={`/atletas/${id}/editar`}
-          className="w-full py-3 rounded-xl border border-border bg-card text-sm font-medium text-center"
-        >
-          Editar atleta
-        </Link>
+        <div className="flex flex-col gap-2">
+          <Link
+            href={`/atletas/${id}/editar`}
+            className="w-full py-3 rounded-xl border border-border bg-card text-sm font-medium text-center"
+          >
+            Editar atleta
+          </Link>
+          <DeleteAthleteButton athleteId={id} athleteName={athlete.name} />
+        </div>
       </div>
     </div>
   )
