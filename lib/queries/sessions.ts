@@ -160,6 +160,68 @@ export async function addSessionExercises(
   if (error) throw new Error(error.message)
 }
 
+export async function deleteSessionExercise(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('session_exercises').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function reorderSessionExercises(
+  updates: Array<{ id: string; position: number }>,
+): Promise<void> {
+  if (updates.length === 0) return
+  const supabase = createClient()
+  await Promise.all(
+    updates.map(({ id, position }) =>
+      supabase.from('session_exercises').update({ position }).eq('id', id),
+    ),
+  )
+}
+
+export async function updateSessionExerciseDuration(
+  id: string,
+  customDuration: number | null,
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('session_exercises')
+    .update({ custom_duration: customDuration })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function insertDuplicateSessionExercise(
+  sessionId:      string,
+  exerciseId:     string,
+  blockType:      string | null,
+  position:       number,
+  customDuration: number | null,
+): Promise<SessionExercise> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('session_exercises')
+    .insert({
+      session_id:      sessionId,
+      exercise_id:     exerciseId,
+      block_type:      blockType,
+      position,
+      custom_duration: customDuration,
+    })
+    .select()
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Insert failed')
+  return data as SessionExercise
+}
+
+export async function markSessionExerciseSkipped(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('session_exercises')
+    .update({ skipped: true })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
 export async function closeSession(
   sessionId: string,
   actualRpe: number,

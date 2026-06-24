@@ -1,9 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createSession, startSession, closeSession, addSessionExercises, updateSessionLogs } from '@/lib/queries/sessions'
+import {
+  createSession, startSession, closeSession, addSessionExercises, updateSessionLogs,
+  deleteSessionExercise, reorderSessionExercises, updateSessionExerciseDuration,
+  insertDuplicateSessionExercise, markSessionExerciseSkipped,
+} from '@/lib/queries/sessions'
 import { addAthleteToSession, upsertSessionAthlete } from '@/lib/queries/sessionAthletes'
-import type { SessionType } from '@/types'
+import type { SessionExercise, SessionType } from '@/types'
 
 export async function createSessionAction(
   weekId: string,
@@ -70,5 +74,44 @@ export async function submitPseAction(
       upsertSessionAthlete(sessionId, athleteId, pse, attended),
     ),
   )
+  revalidatePath(`/sessao/${sessionId}`)
+}
+
+export async function deleteSessionExerciseAction(id: string, sessionId: string): Promise<void> {
+  await deleteSessionExercise(id)
+  revalidatePath(`/sessao/${sessionId}`)
+}
+
+export async function reorderSessionExercisesAction(
+  sessionId: string,
+  updates: Array<{ id: string; position: number }>,
+): Promise<void> {
+  await reorderSessionExercises(updates)
+  revalidatePath(`/sessao/${sessionId}`)
+}
+
+export async function updateSessionExerciseDurationAction(
+  id: string,
+  customDuration: number | null,
+  sessionId: string,
+): Promise<void> {
+  await updateSessionExerciseDuration(id, customDuration)
+  revalidatePath(`/sessao/${sessionId}`)
+}
+
+export async function insertDuplicateSessionExerciseAction(
+  sessionId:      string,
+  exerciseId:     string,
+  blockType:      string | null,
+  position:       number,
+  customDuration: number | null,
+): Promise<SessionExercise> {
+  const se = await insertDuplicateSessionExercise(sessionId, exerciseId, blockType, position, customDuration)
+  revalidatePath(`/sessao/${sessionId}`)
+  return se
+}
+
+export async function markSessionExerciseSkippedAction(id: string, sessionId: string): Promise<void> {
+  await markSessionExerciseSkipped(id)
   revalidatePath(`/sessao/${sessionId}`)
 }

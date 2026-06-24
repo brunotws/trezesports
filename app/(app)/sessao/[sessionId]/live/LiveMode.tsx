@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, ArrowRight, Flag, ChevronDown, ChevronUp } from 'lucide-react'
+import { Play, Pause, ArrowRight, Flag, ChevronDown, ChevronUp, RotateCcw, SkipForward } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDuration } from '@/lib/utils/duration'
+import { markSessionExerciseSkippedAction } from '@/lib/actions/sessions'
 import type { Session, SessionExercise } from '@/types'
 
 interface Props {
@@ -47,35 +48,37 @@ function CoachSection({ title, content, defaultOpen = false }: {
 
 export default function LiveMode({ session, orderedExercises }: Props) {
   const router = useRouter()
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const intervalRef    = useRef<ReturnType<typeof setInterval> | null>(null)
+  const initialSecsRef = useRef(0)
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [secondsLeft, setSecondsLeft] = useState(0)
-  const [running, setRunning] = useState(false)
+  const [secondsLeft, setSecondsLeft]   = useState(0)
+  const [running, setRunning]           = useState(false)
   const [imageExpanded, setImageExpanded] = useState(false)
-  const [fading, setFading] = useState(false)
+  const [fading, setFading]             = useState(false)
 
-  const current = orderedExercises[currentIndex]
-  const ex = current?.exercise
-  const isLast = currentIndex === orderedExercises.length - 1
-  const progress = ((currentIndex + 1) / orderedExercises.length) * 100
+  const current   = orderedExercises[currentIndex]
+  const ex        = current?.exercise
+  const isLast    = currentIndex === orderedExercises.length - 1
+  const progress  = ((currentIndex + 1) / orderedExercises.length) * 100
   const stageName = current?.block_type ?? null
-  const hasDuration = (ex?.duration_min ?? 0) > 0
-  const isAlert = secondsLeft > 0 && secondsLeft <= 30
+  const initialSecs = Math.round((current?.custom_duration ?? ex?.duration_min ?? 0) * 60)
+  const hasDuration = initialSecs > 0
+  const isAlert   = secondsLeft > 0 && secondsLeft <= 30
 
   // Reset timer when exercise changes
   useEffect(() => {
     stopTimer()
-    setSecondsLeft((ex?.duration_min ?? 0) * 60)
+    const secs = Math.round((current?.custom_duration ?? ex?.duration_min ?? 0) * 60)
+    initialSecsRef.current = secs
+    setSecondsLeft(secs)
     setRunning(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex])
 
   // Cleanup interval on unmount
   useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [])
 
   function stopTimer() {
@@ -90,11 +93,7 @@ export default function LiveMode({ session, orderedExercises }: Props) {
     setRunning(true)
     intervalRef.current = setInterval(() => {
       setSecondsLeft(s => {
-        if (s <= 1) {
-          stopTimer()
-          setRunning(false)
-          return 0
-        }
+        if (s <= 1) { stopTimer(); setRunning(false); return 0 }
         return s - 1
       })
     }, 1000)
@@ -105,7 +104,17 @@ export default function LiveMode({ session, orderedExercises }: Props) {
     setRunning(false)
   }
 
-  function handleNext() {
+  function resetTimer() {
+    stopTimer()
+    setSecondsLeft(initialSecsRef.current)
+    setRunning(false)
+  }
+
+  function addTime(seconds: number) {
+    setSecondsLeft(s => s + seconds)
+  }
+
+  function advance() {
     stopTimer()
     if (isLast) {
       router.push(`/sessao/${session.id}/pse`)
@@ -116,12 +125,20 @@ export default function LiveMode({ session, orderedExercises }: Props) {
     setTimeout(() => setFading(false), 320)
   }
 
+  function handleNext() { advance() }
+
+  function handleSkip() {
+    // Fire-and-forget: mark as skipped in DB (non-blocking)
+    void markSessionExerciseSkippedAction(current.id, session.id)
+    advance()
+  }
+
   return (
     <>
-      {/* ── FULLSCREEN OVERLAY (covers BottomNav + PageHeader) ── */}
+      {/* ── FULLSCREEN OVERLAY ── */}
       <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
 
-        {/* ── HEADER: progress bar ── */}
+        {/* ── HEADER ── */}
         <div className="shrink-0 px-4 pt-safe pt-4 pb-3 flex flex-col gap-2 bg-background/95 backdrop-blur-sm border-b border-border/50">
           <div className="flex items-center justify-between">
             <button
@@ -139,7 +156,6 @@ export default function LiveMode({ session, orderedExercises }: Props) {
                 <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{stageName}</p>
               )}
             </div>
-            {/* spacer to center the count */}
             <div className="w-16" />
           </div>
           <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -157,11 +173,13 @@ export default function LiveMode({ session, orderedExercises }: Props) {
             fading ? 'opacity-0' : 'opacity-100',
           )}
         >
-          {/* Exercise name */}
+          {/* Exercise name + duration */}
           <div className="px-4 pt-4 pb-2">
             <h1 className="text-2xl font-bold leading-tight tracking-tight">{ex?.name ?? '—'}</h1>
             {hasDuration && (
-              <p className="text-xs text-muted-foreground mt-1">{formatDuration(ex!.duration_min)}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatDuration(current?.custom_duration ?? ex?.duration_min ?? 0)}
+              </p>
             )}
           </div>
 
@@ -191,7 +209,7 @@ export default function LiveMode({ session, orderedExercises }: Props) {
           )}
 
           {/* ── TIMER ── */}
-          <div className="flex flex-col items-center py-7 gap-4">
+          <div className="flex flex-col items-center py-7 gap-5">
             <span
               className={cn(
                 'text-7xl font-bold tabular-nums tracking-tight transition-colors duration-300',
@@ -204,66 +222,97 @@ export default function LiveMode({ session, orderedExercises }: Props) {
             >
               {formatTime(secondsLeft)}
             </span>
+
             {hasDuration && (
-              <button
-                type="button"
-                onClick={running ? pauseTimer : startTimer}
-                disabled={secondsLeft === 0}
-                className={cn(
-                  'flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all active:scale-95',
-                  running
-                    ? 'bg-muted text-foreground'
-                    : 'bg-primary text-primary-foreground',
-                  secondsLeft === 0 && 'opacity-30 pointer-events-none',
-                )}
-              >
-                {running
-                  ? <><Pause size={16} /> Pausar</>
-                  : <><Play size={16} /> Iniciar</>
-                }
-              </button>
+              <div className="flex items-center gap-4">
+                {/* Reset */}
+                <button
+                  type="button"
+                  onClick={resetTimer}
+                  className="w-11 h-11 rounded-full border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 active:scale-95 transition-all"
+                  title="Resetar cronômetro"
+                >
+                  <RotateCcw size={18} />
+                </button>
+
+                {/* Play / Pause */}
+                <button
+                  type="button"
+                  onClick={running ? pauseTimer : startTimer}
+                  disabled={secondsLeft === 0}
+                  className={cn(
+                    'flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all active:scale-95',
+                    running
+                      ? 'bg-muted text-foreground'
+                      : 'bg-primary text-primary-foreground',
+                    secondsLeft === 0 && 'opacity-30 pointer-events-none',
+                  )}
+                >
+                  {running ? <><Pause size={16} /> Pausar</> : <><Play size={16} /> Iniciar</>}
+                </button>
+
+                {/* +30s */}
+                <button
+                  type="button"
+                  onClick={() => addTime(30)}
+                  className="w-11 h-11 rounded-full border border-border bg-card flex items-center justify-center text-xs font-bold text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 active:scale-95 transition-all"
+                  title="Adicionar 30 segundos"
+                >
+                  +30s
+                </button>
+              </div>
             )}
+
             {isAlert && !running && secondsLeft > 0 && (
-              <p className="text-xs text-orange-400 font-medium">
-                ⚠ Menos de 30 segundos
-              </p>
+              <p className="text-xs text-orange-400 font-medium">⚠ Menos de 30 segundos</p>
             )}
           </div>
 
           {/* ── COACHING POINTS ── */}
           {(ex?.description || ex?.progressao || ex?.regressao) && (
             <div className="mx-4 mb-4 rounded-xl border border-border bg-card overflow-hidden">
-              <CoachSection
-                title="📋 Pontos de Correção"
-                content={ex?.description}
-                defaultOpen
-              />
+              <CoachSection title="📋 Pontos de Correção" content={ex?.description} defaultOpen />
               <CoachSection title="↑ Progressão" content={ex?.progressao} />
               <CoachSection title="↓ Regressão" content={ex?.regressao} />
             </div>
           )}
 
           {/* Spacer for FAB */}
-          <div className="h-28" />
+          <div className="h-36" />
         </div>
 
         {/* ── FAB (sticky bottom) ── */}
         <div className="shrink-0 absolute bottom-0 left-0 right-0 px-4 pb-8 pt-6 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none">
-          <button
-            type="button"
-            onClick={handleNext}
-            className={cn(
-              'pointer-events-auto w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-lg',
-              isLast
-                ? 'bg-green-600 text-white shadow-green-900/30'
-                : 'bg-primary text-primary-foreground shadow-primary/20',
+          <div className="flex flex-col gap-2 pointer-events-auto">
+            {/* Primary: next / finish */}
+            <button
+              type="button"
+              onClick={handleNext}
+              className={cn(
+                'w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-lg',
+                isLast
+                  ? 'bg-green-600 text-white shadow-green-900/30'
+                  : 'bg-primary text-primary-foreground shadow-primary/20',
+              )}
+            >
+              {isLast
+                ? <><Flag size={19} /> Encerrar Sessão</>
+                : <>Feito! Próximo exercício <ArrowRight size={19} /></>
+              }
+            </button>
+
+            {/* Secondary: skip (only when not last) */}
+            {!isLast && (
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="w-full py-2.5 rounded-xl border border-border/60 text-xs font-medium text-muted-foreground flex items-center justify-center gap-1.5 active:bg-muted transition-colors"
+              >
+                <SkipForward size={13} />
+                Pular exercício
+              </button>
             )}
-          >
-            {isLast
-              ? <><Flag size={19} /> Encerrar Sessão</>
-              : <>Feito! Próximo exercício <ArrowRight size={19} /></>
-            }
-          </button>
+          </div>
         </div>
       </div>
 

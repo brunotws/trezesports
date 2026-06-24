@@ -11,6 +11,7 @@ import { startSessionAction, updateSessionLogsAction } from '@/lib/actions/sessi
 import { cloneAsTemplateAction } from '@/lib/actions/sessionTemplates'
 import CloseSessionSheet from './CloseSessionSheet'
 import WellnessCheckinSheet, { type WellnessValues } from './WellnessCheckinSheet'
+import SessionExerciseEditor from './SessionExerciseEditor'
 import type { Session, SessionAthlete, SessionExercise, AthleteReadiness, BlockType, DailyWellness, PrescriptionAdaptation } from '@/types'
 
 const BLOCKS: BlockType[] = ['Aquecimento', 'Parte Analítica', 'Jogo Condicionado']
@@ -399,11 +400,22 @@ export default function SessionActions({ session, athletes, readinessMap, planne
 
       {/* ═══ EXERCÍCIOS ═══ */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          Exercícios
-        </p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Exercícios
+          </p>
+          {session.status === 'planejada' && session.exercises.length > 0 && (
+            <span className="text-[10px] text-primary/70 font-medium">✎ editável</span>
+          )}
+        </div>
         {session.exercises.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum exercício adicionado.</p>
+        ) : session.status === 'planejada' ? (
+          <SessionExerciseEditor
+            sessionId={session.id}
+            stages={session.stages}
+            initialExercises={session.exercises}
+          />
         ) : useDynamic ? (
           /* Dynamic stages layout */
           <div className="flex flex-col gap-3">

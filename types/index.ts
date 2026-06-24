@@ -125,6 +125,7 @@ export interface SessionExercise {
   position:        number
   block_type:      string | null
   custom_duration: number | null
+  skipped:         boolean
   exercise?:       Exercise
 }
 
