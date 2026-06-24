@@ -157,14 +157,16 @@ export default function EditExerciseForm({ exercise, categories, initialCategory
           onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f) }}
         />
         {diagramUrl ? (
-          <div className="relative rounded-xl overflow-hidden border border-border bg-muted aspect-video">
-            <Image src={diagramUrl} alt="Diagrama" fill className="object-contain" />
+          <div className="flex items-center gap-3">
+            <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-border bg-muted shrink-0">
+              <Image src={diagramUrl} alt="Diagrama" fill className="object-cover" />
+            </div>
             <button
               type="button"
               onClick={() => { setDiagramUrl(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
-              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white text-sm flex items-center justify-center"
+              className="text-xs text-red-400 border border-red-500/30 bg-red-500/5 px-3 py-1.5 rounded-lg"
             >
-              ×
+              Remover
             </button>
           </div>
         ) : (
