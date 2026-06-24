@@ -296,21 +296,22 @@ export default function NewExerciseForm({ categories }: Props) {
 
       {/* Duração */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Duração</label>
-          <span className="text-sm font-bold">{durationMin} min</span>
-        </div>
-        <input
-          type="range"
-          min={5}
-          max={90}
-          step={5}
-          value={durationMin}
-          onChange={e => setDurationMin(Number(e.target.value))}
-          className="w-full accent-primary"
-        />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>5 min</span><span>45 min</span><span>90 min</span>
+        <label className="text-sm font-medium">Duração</label>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => setDurationMin(v => Math.max(1, v - 5))}
+            className="w-10 h-10 rounded-lg border border-border bg-card text-lg font-bold flex items-center justify-center shrink-0">−</button>
+          <div className="flex-1 flex items-center gap-1.5 rounded-lg border border-input bg-muted px-3 py-2.5">
+            <input
+              type="number"
+              min={1}
+              value={durationMin}
+              onChange={e => setDurationMin(Math.max(1, Number(e.target.value) || 1))}
+              className="w-full bg-transparent text-sm font-bold outline-none text-center tabular-nums"
+            />
+            <span className="text-sm text-muted-foreground shrink-0">min</span>
+          </div>
+          <button type="button" onClick={() => setDurationMin(v => v + 5)}
+            className="w-10 h-10 rounded-lg border border-border bg-card text-lg font-bold flex items-center justify-center shrink-0">+</button>
         </div>
       </div>
 
