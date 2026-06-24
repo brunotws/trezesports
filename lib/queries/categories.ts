@@ -3,7 +3,8 @@ import type { Category, ExerciseWithCategories, Exercise } from '@/types'
 
 export async function getCategories(): Promise<Category[]> {
   const supabase = createClient()
-  const { data } = await supabase.from('categories').select('*').order('name')
+  const { data, error } = await supabase.from('categories').select('*').order('name')
+  if (error) return [] // table may not exist yet
   return data ?? []
 }
 
@@ -60,7 +61,11 @@ export async function getExercisesWithCategories(): Promise<ExerciseWithCategori
     .from('exercises')
     .select('*, exercise_categories(categories(*))')
     .order('name')
-  if (error) throw new Error(error.message)
+  if (error) {
+    // Fallback: table may not exist yet (migration pending)
+    const { data: plain } = await supabase.from('exercises').select('*').order('name')
+    return (plain ?? []).map(ex => ({ ...(ex as Exercise), categories: [] }))
+  }
   return (data ?? []).map(ex => ({
     ...(ex as Exercise),
     categories: ((ex as { exercise_categories: { categories: unknown }[] }).exercise_categories ?? [])
