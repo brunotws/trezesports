@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { SESSION_TYPE_LABELS, SESSION_TYPE_COLORS } from '@/lib/engine/morphocycle'
 import { deleteSessionAction } from '@/lib/actions/sessionTemplates'
-import type { TemplateSession } from '@/lib/queries/sessionTemplates'
+import type { TemplateSession } from '@/types'
 
 interface Props {
   templates: TemplateSession[]

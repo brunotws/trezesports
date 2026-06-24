@@ -1,9 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Session, SessionExercise } from '@/types'
-
-export interface TemplateSession extends Session {
-  exerciseCount: number
-}
+import type { Session, SessionExercise, TemplateSession } from '@/types'
 
 export async function getTemplates(): Promise<TemplateSession[]> {
   const supabase = createClient()

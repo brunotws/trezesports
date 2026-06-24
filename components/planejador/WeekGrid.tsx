@@ -58,7 +58,6 @@ export default function WeekGrid({ weekId, weekStartDate, cells }: Props) {
     })
   }
 
-  const sessionIds = cells.map(c => c.session?.id).filter(Boolean) as string[]
   const hasCompletedSelected = Array.from(selectedIds).some(id => {
     const cell = cells.find(c => c.session?.id === id)
     return cell?.session?.status === 'encerrada'

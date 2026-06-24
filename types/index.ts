@@ -161,6 +161,10 @@ export interface SessionTemplate {
   exercises?:  SessionTemplateExercise[]
 }
 
+export interface TemplateSession extends Session {
+  exerciseCount: number
+}
+
 export interface ExerciseGroup {
   id:         string
   name:       string
