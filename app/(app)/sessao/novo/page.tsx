@@ -2,6 +2,7 @@ import { getAthletes } from '@/lib/queries/athletes'
 import { getExercises } from '@/lib/queries/exercises'
 import { getExerciseGroups } from '@/lib/queries/exerciseGroups'
 import { getAllACWR } from '@/lib/queries/analytics'
+import { getAllTodayWellness } from '@/lib/queries/wellness'
 import { computeEnergyPct } from '@/lib/engine/energy'
 import PageHeader from '@/components/layout/PageHeader'
 import NewSessionForm from './NewSessionForm'
@@ -19,15 +20,20 @@ export default async function NovaSessionPage({ searchParams }: Props) {
     )
   }
 
-  const [athletes, exercises, groups, acwrRows] = await Promise.all([
+  const [athletes, exercises, groups, acwrRows, allWellness] = await Promise.all([
     getAthletes(),
     getExercises(),
     getExerciseGroups(),
     getAllACWR(),
+    getAllTodayWellness(),
   ])
 
+  const acwrMap = Object.fromEntries(acwrRows.map(r => [r.athlete_id, r]))
   const athleteEnergyMap = Object.fromEntries(
-    acwrRows.map(r => [r.athlete_id, computeEnergyPct(r.acute_load)]),
+    athletes.map(a => [
+      a.id,
+      computeEnergyPct(acwrMap[a.id]?.acute_load ?? null, allWellness[a.id] ?? null),
+    ]),
   )
 
   return (

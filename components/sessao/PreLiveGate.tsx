@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import WellnessCheckinSheet, { type WellnessValues } from './WellnessCheckinSheet'
+import { computeWellnessModifier, getEnergyMeta } from '@/lib/engine/energy'
 import type { SessionAthlete, SessionExercise, DailyWellness } from '@/types'
 
 type Status = 'green' | 'yellow' | 'red'
@@ -54,14 +55,15 @@ const STATUS_STYLE: Record<Status, { dot: string; badge: string; label: string }
 }
 
 interface Props {
-  sessionId:   string
-  athletes:    SessionAthlete[]
-  exercises:   SessionExercise[]
-  wellnessMap: Record<string, DailyWellness | null>
-  onCancel:    () => void
+  sessionId:      string
+  athletes:       SessionAthlete[]
+  exercises:      SessionExercise[]
+  wellnessMap:    Record<string, DailyWellness | null>
+  baseEnergyMap?: Record<string, number>
+  onCancel:       () => void
 }
 
-export default function PreLiveGate({ sessionId, athletes, exercises, wellnessMap, onCancel }: Props) {
+export default function PreLiveGate({ sessionId, athletes, exercises, wellnessMap, baseEnergyMap, onCancel }: Props) {
   const router = useRouter()
 
   const [wellnessValues, setWellnessValues] = useState<Record<string, WellnessValues>>(() => {
@@ -81,6 +83,14 @@ export default function PreLiveGate({ sessionId, athletes, exercises, wellnessMa
 
   const [step, setStep]                         = useState<'checkin' | 'summary'>('checkin')
   const [currentCheckinId, setCurrentCheckinId] = useState<string | null>(null)
+
+  function effectiveEnergy(athleteId: string): number | null {
+    const base = baseEnergyMap?.[athleteId]
+    if (base === undefined) return null
+    const w = wellnessValues[athleteId]
+    if (!w) return base
+    return Math.round(base * computeWellnessModifier(w))
+  }
 
   const athletesWithStatus = athletes.map(sa => ({
     athleteId: sa.athlete_id,
@@ -150,18 +160,34 @@ export default function PreLiveGate({ sessionId, athletes, exercises, wellnessMa
         )}
 
         <div className="flex flex-col gap-2 mb-6">
-          {athletesWithStatus.map(a => (
-            <div key={a.athleteId} className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-card">
-              <span className="text-sm font-medium">{a.name}</span>
-              {a.status ? (
-                <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded border', STATUS_STYLE[a.status].badge)}>
-                  {STATUS_STYLE[a.status].label}
-                </span>
-              ) : (
-                <span className="text-[10px] text-muted-foreground italic">sem check-in</span>
-              )}
-            </div>
-          ))}
+          {athletesWithStatus.map(a => {
+            const energy = effectiveEnergy(a.athleteId)
+            const eMeta  = energy !== null ? getEnergyMeta(energy) : null
+            return (
+              <div key={a.athleteId} className="flex flex-col gap-1.5 px-3 py-2.5 rounded-xl border border-border bg-card">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{a.name}</span>
+                  {a.status ? (
+                    <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded border', STATUS_STYLE[a.status].badge)}>
+                      {STATUS_STYLE[a.status].label}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground italic">sem check-in</span>
+                  )}
+                </div>
+                {eMeta && energy !== null && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className={`h-full rounded-full ${eMeta.bar}`} style={{ width: `${energy}%` }} />
+                    </div>
+                    <span className={`text-[10px] font-semibold tabular-nums shrink-0 ${eMeta.text}`}>
+                      ⚡{energy}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <button
@@ -201,6 +227,8 @@ export default function PreLiveGate({ sessionId, athletes, exercises, wellnessMa
           if (vals && vals.doms <= 2)          flags.push('DOMS')
           if (vals && vals.fatigue <= 2)       flags.push('Fadiga')
           if (vals && vals.sleep_quality <= 2) flags.push('Sono')
+          const energy = effectiveEnergy(sa.athlete_id)
+          const eMeta  = energy !== null ? getEnergyMeta(energy) : null
 
           return (
             <div
@@ -224,23 +252,30 @@ export default function PreLiveGate({ sessionId, athletes, exercises, wellnessMa
                   )}
                 </div>
               </div>
-              {status ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrentCheckinId(sa.athlete_id)}
-                  className="text-[10px] text-primary/70 underline shrink-0 ml-2"
-                >
-                  Editar
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setCurrentCheckinId(sa.athlete_id)}
-                  className="text-[10px] font-semibold px-2.5 py-1.5 rounded-full border border-primary/30 text-primary bg-primary/10 shrink-0"
-                >
-                  Check-in
-                </button>
-              )}
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                {eMeta && energy !== null && (
+                  <span className={`text-[10px] font-bold tabular-nums ${eMeta.text}`}>
+                    ⚡{energy}%
+                  </span>
+                )}
+                {status ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentCheckinId(sa.athlete_id)}
+                    className="text-[10px] text-primary/70 underline"
+                  >
+                    Editar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentCheckinId(sa.athlete_id)}
+                    className="text-[10px] font-semibold px-2.5 py-1.5 rounded-full border border-primary/30 text-primary bg-primary/10"
+                  >
+                    Check-in
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}

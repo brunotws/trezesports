@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { formatDuration } from '@/lib/utils/duration'
 import { buildMorphocycleContext, SESSION_TYPE_LABELS, SESSION_TYPE_COLORS } from '@/lib/engine/morphocycle'
 import { buildPrescriptionAdaptations } from '@/lib/engine/prescriptions'
+import { computeWellnessModifier, getEnergyMeta } from '@/lib/engine/energy'
 import { startSessionAction, updateSessionLogsAction } from '@/lib/actions/sessions'
 import { cloneAsTemplateAction } from '@/lib/actions/sessionTemplates'
 import CloseSessionSheet from './CloseSessionSheet'
@@ -24,13 +25,14 @@ const BLOCK_LABEL_COLORS: Record<string, string> = {
 }
 
 interface Props {
-  session:      Session & { exercises: SessionExercise[] }
-  athletes:     SessionAthlete[]
-  readinessMap: AthleteReadiness[]
-  plannedLoad:  number
-  wellnessMap:  Record<string, DailyWellness | null>
-  exercises?:   Exercise[]
-  groups?:      ExerciseGroup[]
+  session:         Session & { exercises: SessionExercise[] }
+  athletes:        SessionAthlete[]
+  readinessMap:    AthleteReadiness[]
+  plannedLoad:     number
+  wellnessMap:     Record<string, DailyWellness | null>
+  baseEnergyMap?:  Record<string, number>
+  exercises?:      Exercise[]
+  groups?:         ExerciseGroup[]
 }
 
 const STATUS_ICON = {
@@ -75,7 +77,7 @@ function dotColor(v: number) {
   return 'bg-red-500'
 }
 
-export default function SessionActions({ session, athletes, readinessMap, plannedLoad, wellnessMap, exercises, groups }: Props) {
+export default function SessionActions({ session, athletes, readinessMap, plannedLoad, wellnessMap, baseEnergyMap, exercises, groups }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [sheetOpen, setSheetOpen]   = useState(false)
@@ -95,6 +97,7 @@ export default function SessionActions({ session, athletes, readinessMap, planne
   const [readinessOverrides, setReadinessOverrides] = useState<
     Record<string, { status: 'green' | 'yellow' | 'red'; prescriptions: PrescriptionAdaptation[] }>
   >({})
+  const [energyOverrides, setEnergyOverrides] = useState<Record<string, number>>({})
   const [checkedInIds, setCheckedInIds] = useState<Set<string>>(new Set())
 
   const morpho = session.status !== 'encerrada'
@@ -120,6 +123,12 @@ export default function SessionActions({ session, athletes, readinessMap, planne
     const avg = metrics.reduce((a, b) => a + b, 0) / metrics.length
     const status: 'green' | 'yellow' | 'red' = avg > 3.75 ? 'green' : avg >= 2.5 ? 'yellow' : 'red'
     setReadinessOverrides(prev => ({ ...prev, [athleteId]: { status, prescriptions } }))
+
+    // Debuff imediato na energia com base no wellness recém submetido
+    const base = baseEnergyMap?.[athleteId] ?? 100
+    const mod  = computeWellnessModifier({ fatigue: values.fatigue, sleep_quality: values.sleep_quality, doms: values.doms, mood: values.mood })
+    setEnergyOverrides(prev => ({ ...prev, [athleteId]: Math.round(base * mod) }))
+
     setCheckedInIds(prev => new Set(prev).add(athleteId))
     router.refresh()
   }
@@ -335,6 +344,16 @@ export default function SessionActions({ session, athletes, readinessMap, planne
               const w        = !override ? (r?.wellness ?? null) : null
               const hasCheckedIn = checkedInIds.has(sa.athlete_id) || !!wellnessMap[sa.athlete_id]
 
+              // Energia efetiva: override pós check-in > wellness do DB × base > base pura
+              const effectiveEnergy = (() => {
+                if (energyOverrides[sa.athlete_id] !== undefined) return energyOverrides[sa.athlete_id]
+                const base = baseEnergyMap?.[sa.athlete_id]
+                if (base === undefined) return null
+                const wRow = wellnessMap[sa.athlete_id]
+                if (!wRow) return base
+                return Math.round(base * computeWellnessModifier(wRow))
+              })()
+
               return (
                 <div
                   key={sa.id}
@@ -365,6 +384,11 @@ export default function SessionActions({ session, athletes, readinessMap, planne
                   ) : !hasCheckedIn ? (
                     <span className="text-[10px] text-muted-foreground/50 italic">sem wellness</span>
                   ) : null}
+                  {effectiveEnergy !== null && (
+                    <span className={`text-[10px] font-bold tabular-nums shrink-0 ${getEnergyMeta(effectiveEnergy).text}`}>
+                      ⚡{effectiveEnergy}%
+                    </span>
+                  )}
                   {sa.pse !== null && (
                     <span className="text-xs text-muted-foreground ml-1">
                       PSE <b className="text-foreground">{sa.pse}</b>
@@ -601,6 +625,7 @@ export default function SessionActions({ session, athletes, readinessMap, planne
               athletes={athletes}
               exercises={session.exercises}
               wellnessMap={wellnessMap}
+              baseEnergyMap={baseEnergyMap}
               onCancel={() => setShowGate(false)}
             />
           )}

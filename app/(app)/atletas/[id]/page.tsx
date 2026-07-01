@@ -133,7 +133,7 @@ export default async function AtletaPerfilPage({ params }: Props) {
             </div>
           )}
           {(() => {
-            const energyPct  = computeEnergyPct(acwrRow?.acute_load ?? null)
+            const energyPct  = computeEnergyPct(acwrRow?.acute_load ?? null, todayWellness)
             const energyMeta = getEnergyMeta(energyPct)
             return (
               <div className={`mt-3 rounded-lg border px-3 py-2.5 ${energyMeta.border}`}>

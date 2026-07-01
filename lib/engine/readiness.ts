@@ -7,7 +7,7 @@ import {
 } from './acwr'
 import { buildPrescriptionAdaptations } from './prescriptions'
 import { buildMorphocycleContext } from './morphocycle'
-import { computeEnergyPct, energyToReadiness } from './energy'
+import { computeEnergyPct, energyToReadiness, type WellnessForEnergy } from './energy'
 
 // ─── Thresholds ─────────────────────────────────────────────
 const ACWR_GREEN_MIN  = 0.8
@@ -130,7 +130,13 @@ export function calculateReadinessScore(input: ReadinessInput): ReadinessResult 
                        + todayWellness.doms    + todayWellness.mood
   const wellnessStatus = evalWellnessStatus(wellnessTotal)
   const acwrStatus     = evalACWRStatus(acwr)
-  const energyPct      = computeEnergyPct(acuteLoad)
+  const energyWellness: WellnessForEnergy = {
+    fatigue:       todayWellness.fatigue,
+    sleep_quality: todayWellness.sleepQuality,
+    doms:          todayWellness.doms,
+    mood:          todayWellness.mood,
+  }
+  const energyPct      = computeEnergyPct(acuteLoad, energyWellness)
   const energyStatus   = energyToReadiness(energyPct)
   const status         = worstOf(worstOf(acwrStatus, wellnessStatus), energyStatus)
 

@@ -47,6 +47,15 @@ export async function getWellnessForDates(
   return map
 }
 
+export async function getAllTodayWellness(): Promise<Record<string, DailyWellness>> {
+  const supabase = createClient()
+  const today = new Date().toISOString().split('T')[0]
+  const { data } = await supabase.from('daily_wellness').select('*').eq('date', today)
+  const map: Record<string, DailyWellness> = {}
+  for (const row of (data ?? [])) map[row.athlete_id] = row
+  return map
+}
+
 export async function upsertWellness(
   athleteId: string,
   date: string,

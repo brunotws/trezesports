@@ -1,14 +1,43 @@
 import type { ReadinessStatus } from '@/types'
 
-// Carga aguda (7-day average sRPE) que representa 100% de esgotamento
-// Referência: RPE 8 × 90min × 5 sessões/semana = 3600 AU/semana → 514/dia
-// Threshold conservador para alertar antes do limite absoluto
 const MAX_ACUTE_LOAD = 350
 
-export function computeEnergyPct(acuteLoad: number | null): number {
-  if (acuteLoad === null) return 100
-  return Math.max(0, Math.min(100, Math.round(100 - (acuteLoad / MAX_ACUTE_LOAD) * 100)))
+// ── Wellness modifier ─────────────────────────────────────────────────────────
+// Snake-case to match DailyWellness DB rows and WellnessValues from checkin sheet
+export interface WellnessForEnergy {
+  fatigue:       number  // 1–5 (5 = ótimo)
+  sleep_quality: number
+  doms:          number
+  mood:          number
 }
+
+// Weighted deficit from ideal (5 = perfect). Max deficit = 4.0 → max 50% drain.
+const W = { fatigue: 0.30, sleep: 0.30, doms: 0.25, mood: 0.15 } as const
+
+export function computeWellnessModifier(w: WellnessForEnergy | null | undefined): number {
+  if (!w) return 1.0
+  const deficit =
+    W.fatigue * Math.max(0, 5 - w.fatigue) +
+    W.sleep   * Math.max(0, 5 - w.sleep_quality) +
+    W.doms    * Math.max(0, 5 - w.doms) +
+    W.mood    * Math.max(0, 5 - w.mood)
+  return Math.max(0.50, 1.0 - (deficit / 4.0) * 0.50)
+}
+
+// ── Core computation ──────────────────────────────────────────────────────────
+
+export function computeEnergyPct(
+  acuteLoad: number | null,
+  wellness?: WellnessForEnergy | null,
+): number {
+  const base = acuteLoad === null
+    ? 100
+    : Math.max(0, Math.min(100, Math.round(100 - (acuteLoad / MAX_ACUTE_LOAD) * 100)))
+  const mod = computeWellnessModifier(wellness)
+  return Math.max(0, Math.min(100, Math.round(base * mod)))
+}
+
+// ── Metadata ──────────────────────────────────────────────────────────────────
 
 export type EnergyLevel = 'full' | 'good' | 'moderate' | 'low' | 'critical'
 

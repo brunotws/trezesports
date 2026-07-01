@@ -3,7 +3,9 @@ import { getSessionWithExercises, getSessionAthletes, getWeekPlannedLoads } from
 import { getTodayWellness } from '@/lib/queries/wellness'
 import { getExercises } from '@/lib/queries/exercises'
 import { getExerciseGroups } from '@/lib/queries/exerciseGroups'
+import { getAllACWR } from '@/lib/queries/analytics'
 import { buildPrescriptionAdaptations } from '@/lib/engine/prescriptions'
+import { computeEnergyPct } from '@/lib/engine/energy'
 import PageHeader from '@/components/layout/PageHeader'
 import SessionActions from '@/components/sessao/SessionActions'
 import type { AthleteReadiness, DailyWellness, Exercise, ExerciseGroup } from '@/types'
@@ -28,12 +30,15 @@ export default async function SessionPage({ params }: Props) {
   if (!session) notFound()
 
   const isPlanejada = session.status === 'planejada'
-  const [athletes, loads, exercises, groups] = await Promise.all([
+  const [athletes, loads, exercises, groups, acwrRows] = await Promise.all([
     getSessionAthletes(sessionId),
     getWeekPlannedLoads([sessionId]),
     isPlanejada ? getExercises() : Promise.resolve([] as Exercise[]),
     isPlanejada ? getExerciseGroups() : Promise.resolve([] as ExerciseGroup[]),
+    getAllACWR(),
   ])
+
+  const acwrMap = Object.fromEntries(acwrRows.map(r => [r.athlete_id, r.acute_load]))
 
   const plannedLoad = loads[0]?.planned_load ?? 0
 
@@ -44,6 +49,12 @@ export default async function SessionPage({ params }: Props) {
 
   const wellnessMap: Record<string, DailyWellness | null> = {}
   athletes.forEach((sa, i) => { wellnessMap[sa.athlete_id] = wellnessResults[i] })
+
+  // Base energy = load-only (no wellness modifier); modifier applied client-side in real-time
+  const baseEnergyMap: Record<string, number> = {}
+  athletes.forEach(sa => {
+    baseEnergyMap[sa.athlete_id] = computeEnergyPct(acwrMap[sa.athlete_id] ?? null)
+  })
 
   const readinessMap: AthleteReadiness[] = athletes.map((sa, i) => {
     const w = wellnessResults[i]
@@ -83,6 +94,7 @@ export default async function SessionPage({ params }: Props) {
         readinessMap={readinessMap}
         plannedLoad={plannedLoad}
         wellnessMap={wellnessMap}
+        baseEnergyMap={baseEnergyMap}
         exercises={isPlanejada ? exercises : undefined}
         groups={isPlanejada ? groups : undefined}
       />
