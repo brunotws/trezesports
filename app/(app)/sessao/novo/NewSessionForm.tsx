@@ -19,10 +19,11 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Zap } from 'lucide-react'
 import { createSessionAction, addAthletesToSessionAction, addExercisesToSessionAction } from '@/lib/actions/sessions'
 import ExercisePickerSheet from '@/components/sessao/ExercisePickerSheet'
 import ExerciseInstanceCard from '@/components/shared/ExerciseInstanceCard'
+import { getEnergyMeta } from '@/lib/engine/energy'
 import type { Athlete, Exercise, ExerciseGroup, ExerciseInstance, Stage } from '@/types'
 
 const CATEGORIES = ['Sub-7','Sub-8','Sub-9','Sub-10','Sub-11','Sub-12','Sub-13','Sub-14','Sub-15']
@@ -44,17 +45,18 @@ function ExerciseDragGhost({ exercise }: { exercise: Exercise }) {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
-  weekId:    string
-  day:       number
-  sn:        number
-  date:      string
-  athletes:  Athlete[]
-  exercises: Exercise[]
-  groups:    ExerciseGroup[]
+  weekId:            string
+  day:               number
+  sn:                number
+  date:              string
+  athletes:          Athlete[]
+  exercises:         Exercise[]
+  groups:            ExerciseGroup[]
+  athleteEnergyMap?: Record<string, number>
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function NewSessionForm({ weekId, day, sn, date, athletes, exercises, groups }: Props) {
+export default function NewSessionForm({ weekId, day, sn, date, athletes, exercises, groups, athleteEnergyMap = {} }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -254,6 +256,15 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     })
   }
 
+  // Collective energy
+  const collectiveEnergyPct = useMemo(() => {
+    if (selectedAthleteIds.size === 0) return 100
+    const values = Array.from(selectedAthleteIds).map(id => athleteEnergyMap[id] ?? 100)
+    return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+  }, [selectedAthleteIds, athleteEnergyMap])
+  const energyMeta     = getEnergyMeta(collectiveEnergyPct)
+  const criticalEnergy = collectiveEnergyPct < 40
+
   // drag ghost
   const allInstances = useMemo(() => Object.values(stageExercises).flat(), [stageExercises])
   const dragActiveExercise = dragActiveId
@@ -367,6 +378,34 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
           </div>
         )}
       </section>
+
+      {/* ═══ ENERGIA COLETIVA ═══ */}
+      {selectedAthleteIds.size > 0 && (
+        <div className={`rounded-xl border px-4 py-3 flex flex-col gap-2 ${energyMeta.border}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Zap size={13} className={energyMeta.text} />
+              <span className="text-xs font-medium text-muted-foreground">
+                Energia coletiva do grupo
+              </span>
+            </div>
+            <span className={`text-xs font-semibold ${energyMeta.text}`}>
+              {energyMeta.label} — {collectiveEnergyPct}%
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${energyMeta.bar}`}
+              style={{ width: `${collectiveEnergyPct}%` }}
+            />
+          </div>
+          {criticalEnergy && (
+            <p className="text-[11px] text-orange-400">
+              ⚠ Grupo com fadiga crítica — exercícios de alta intensidade (dif. 4–5) estão sinalizados no builder.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ═══ 3. LINHA DO TEMPO ═══ */}
       <section>
@@ -531,6 +570,7 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
         exercises={exercises}
         groups={groups}
         selectedIds={new Set<string>()}
+        criticalEnergy={criticalEnergy}
         onAdd={exerciseId => {
           if (activeStageId) addExerciseToStage(activeStageId, exerciseId, null)
         }}

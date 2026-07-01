@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus, Trophy, Users } from 'lucide-react'
+import { Plus, Trophy, Users, ClipboardList } from 'lucide-react'
 import { getGames, getGameAthletes } from '@/lib/queries/games'
 import { getAthletes } from '@/lib/queries/athletes'
 import DeleteGameButton from './DeleteGameButton'
@@ -73,6 +73,7 @@ export default async function JogosPage() {
                   game={game}
                   convocadoIds={convocadosMap[game.id] ?? []}
                   athleteMap={athleteMap}
+                  showPseLink
                   muted
                 />
               ))}
@@ -85,12 +86,13 @@ export default async function JogosPage() {
 }
 
 function GameCard({
-  game, convocadoIds, athleteMap, muted,
+  game, convocadoIds, athleteMap, muted, showPseLink,
 }: {
   game: Game
   convocadoIds: string[]
   athleteMap: Record<string, Athlete>
   muted?: boolean
+  showPseLink?: boolean
 }) {
   const dateObj = new Date(game.date + 'T00:00:00')
   const dateStr = dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })
@@ -137,6 +139,16 @@ function GameCard({
         </div>
       ) : (
         <p className="text-[11px] text-muted-foreground/60 italic">Nenhum convocado registrado</p>
+      )}
+
+      {showPseLink && convocadoIds.length > 0 && (
+        <Link
+          href={`/jogos/${game.id}/pse`}
+          className="flex items-center gap-1.5 text-[11px] text-primary font-medium w-fit"
+        >
+          <ClipboardList size={12} />
+          Registrar PSE
+        </Link>
       )}
     </div>
   )

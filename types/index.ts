@@ -157,9 +157,13 @@ export interface Game {
 }
 
 export interface GameAthlete {
-  game_id:    string
-  athlete_id: string
-  athlete?:   Athlete
+  game_id:      string
+  athlete_id:   string
+  attended?:    boolean | null
+  pse?:         number | null
+  duration_min?: number | null
+  srpe?:        number | null
+  athlete?:     Athlete
 }
 
 export interface SessionTemplate {
@@ -281,6 +285,8 @@ export interface ReadinessResult {
   monotony:                number | null
   strain:                  number | null
   volumeAdjustmentFactor:  number
+  energyPct:               number
+  energyStatus:            ReadinessStatus
   recommendations:         string[]
   prescriptionAdaptations: PrescriptionAdaptation[]
   morphocycleContext:      MorphocycleContext | null

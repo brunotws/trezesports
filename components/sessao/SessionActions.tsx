@@ -12,6 +12,7 @@ import { cloneAsTemplateAction } from '@/lib/actions/sessionTemplates'
 import CloseSessionSheet from './CloseSessionSheet'
 import WellnessCheckinSheet, { type WellnessValues } from './WellnessCheckinSheet'
 import SessionExerciseEditor from './SessionExerciseEditor'
+import PreLiveGate from './PreLiveGate'
 import type { Session, SessionAthlete, SessionExercise, AthleteReadiness, BlockType, DailyWellness, PrescriptionAdaptation, Exercise, ExerciseGroup } from '@/types'
 
 const BLOCKS: BlockType[] = ['Aquecimento', 'Parte Analítica', 'Jogo Condicionado']
@@ -77,7 +78,8 @@ function dotColor(v: number) {
 export default function SessionActions({ session, athletes, readinessMap, plannedLoad, wellnessMap, exercises, groups }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetOpen, setSheetOpen]   = useState(false)
+  const [showGate, setShowGate]     = useState(false)
 
   // Diário de bordo
   const [notes, setNotes]         = useState(session.coach_notes ?? '')
@@ -570,12 +572,13 @@ export default function SessionActions({ session, athletes, readinessMap, planne
       {session.status === 'em_andamento' && (
         <>
           {session.exercises.length > 0 && (
-            <a
-              href={`/sessao/${session.id}/live`}
-              className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm text-center block"
+            <button
+              type="button"
+              onClick={() => setShowGate(true)}
+              className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm text-center"
             >
               🎯 Modo Live — Iniciar Aula
-            </a>
+            </button>
           )}
           <button
             type="button"
@@ -592,6 +595,15 @@ export default function SessionActions({ session, athletes, readinessMap, planne
             plannedRpe={plannedLoad}
             suggestedDuration={morpho?.suggestedDurationMin ?? 60}
           />
+          {showGate && (
+            <PreLiveGate
+              sessionId={session.id}
+              athletes={athletes}
+              exercises={session.exercises}
+              wellnessMap={wellnessMap}
+              onCancel={() => setShowGate(false)}
+            />
+          )}
         </>
       )}
 

@@ -40,11 +40,11 @@ export default function NewGameForm({ athletes }: Props) {
   function handleSubmit() {
     if (!opponent.trim() || !date) return
     startTransition(async () => {
-      await createGameAction(
+      const game = await createGameAction(
         { date, opponent: opponent.trim(), type, blocks_day_before: blocksVespera },
         Array.from(selectedIds),
       )
-      router.push('/jogos')
+      router.push(`/jogos/${game.id}/pse`)
     })
   }
 

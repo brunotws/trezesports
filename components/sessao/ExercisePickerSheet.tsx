@@ -19,13 +19,14 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 interface Props {
-  open:           boolean
-  onOpenChange:   (open: boolean) => void
-  exercises:      Exercise[]
-  groups:         ExerciseGroup[]
-  selectedIds:    Set<string>
-  onAdd:          (exerciseId: string) => void
-  onAddGroup:     (items: Array<{ exerciseId: string; customDuration: number | null }>) => void
+  open:            boolean
+  onOpenChange:    (open: boolean) => void
+  exercises:       Exercise[]
+  groups:          ExerciseGroup[]
+  selectedIds:     Set<string>
+  criticalEnergy?: boolean
+  onAdd:           (exerciseId: string) => void
+  onAddGroup:      (items: Array<{ exerciseId: string; customDuration: number | null }>) => void
 }
 
 export default function ExercisePickerSheet({
@@ -34,6 +35,7 @@ export default function ExercisePickerSheet({
   exercises,
   groups,
   selectedIds,
+  criticalEnergy = false,
   onAdd,
   onAddGroup,
 }: Props) {
@@ -77,6 +79,11 @@ export default function ExercisePickerSheet({
         {/* Exercises tab */}
         {tab === 'exercises' && (
           <div className="flex flex-col gap-2 px-4 pt-3 flex-1 overflow-hidden">
+            {criticalEnergy && (
+              <p className="text-[11px] text-orange-400 shrink-0">
+                ⚠ Fadiga crítica — exercícios dif. 4–5 sinalizados abaixo
+              </p>
+            )}
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -91,7 +98,8 @@ export default function ExercisePickerSheet({
                 </p>
               )}
               {filtered.map(ex => {
-                const isAdded = selectedIds.has(ex.id)
+                const isAdded    = selectedIds.has(ex.id)
+                const isHighLoad = criticalEnergy && (ex.fatigue_level ?? 0) >= 4
                 return (
                   <button
                     key={ex.id}
@@ -102,7 +110,9 @@ export default function ExercisePickerSheet({
                       'flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors',
                       isAdded
                         ? 'border-primary/30 bg-primary/10 opacity-60 cursor-default'
-                        : 'border-border bg-card hover:bg-muted',
+                        : isHighLoad
+                          ? 'border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10'
+                          : 'border-border bg-card hover:bg-muted',
                     )}
                   >
                     {ex.diagram_url ? (
@@ -131,7 +141,9 @@ export default function ExercisePickerSheet({
                       </div>
                     </div>
                     {!isAdded && (
-                      <span className="text-primary font-bold text-lg leading-none shrink-0">+</span>
+                      isHighLoad
+                        ? <span className="text-orange-400 text-xs font-semibold shrink-0">⚠ +</span>
+                        : <span className="text-primary font-bold text-lg leading-none shrink-0">+</span>
                     )}
                   </button>
                 )

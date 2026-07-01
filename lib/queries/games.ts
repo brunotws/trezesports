@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Game } from '@/types'
+import type { Athlete, Game, GameAthlete } from '@/types'
 import { weekIdToDate, addDays, toISODate } from '@/lib/utils/week'
 
 export async function addGameAthletes(gameId: string, athleteIds: string[]): Promise<void> {
@@ -52,6 +52,30 @@ export async function getWeekGames(weekId: string): Promise<Game[]> {
     .order('date')
 
   return data ?? []
+}
+
+export async function getGameWithAthletes(gameId: string): Promise<{
+  game: Game
+  athletes: (GameAthlete & { athlete: Athlete | null })[]
+} | null> {
+  const supabase = createClient()
+  const { data: game } = await supabase.from('games').select('*').eq('id', gameId).single()
+  if (!game) return null
+  const { data: athletes } = await supabase
+    .from('game_athletes')
+    .select('*, athlete:athletes(*)')
+    .eq('game_id', gameId)
+  return { game: game as Game, athletes: (athletes ?? []) as (GameAthlete & { athlete: Athlete | null })[] }
+}
+
+export async function upsertGameAthletePse(
+  entries: Array<{ game_id: string; athlete_id: string; pse: number | null; duration_min: number; attended: boolean }>,
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('game_athletes')
+    .upsert(entries, { onConflict: 'game_id,athlete_id' })
+  if (error) throw new Error(error.message)
 }
 
 export async function createGame(values: {

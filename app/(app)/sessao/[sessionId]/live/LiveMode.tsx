@@ -6,22 +6,24 @@ import { Play, Pause, ArrowRight, Flag, ChevronDown, ChevronUp, RotateCcw, SkipF
 import { cn } from '@/lib/utils'
 import { formatDuration } from '@/lib/utils/duration'
 import { markSessionExerciseSkippedAction } from '@/lib/actions/sessions'
-import type { Session, SessionExercise } from '@/types'
+import type { Session, SessionExercise, SessionAthlete, AthleteReadiness } from '@/types'
 
 interface Props {
-  session: Session & { exercises: SessionExercise[] }
+  session:          Session & { exercises: SessionExercise[] }
   orderedExercises: SessionExercise[]
+  athletes:         SessionAthlete[]
+  readinessMap:     AthleteReadiness[]
 }
 
 function formatTime(s: number) {
-  const m = Math.floor(s / 60)
+  const m   = Math.floor(s / 60)
   const sec = s % 60
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
 function CoachSection({ title, content, defaultOpen = false }: {
-  title: string
-  content: string | null | undefined
+  title:        string
+  content:      string | null | undefined
   defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -35,7 +37,7 @@ function CoachSection({ title, content, defaultOpen = false }: {
       >
         <span>{title}</span>
         {open
-          ? <ChevronUp size={14} className="text-muted-foreground shrink-0" />
+          ? <ChevronUp   size={14} className="text-muted-foreground shrink-0" />
           : <ChevronDown size={14} className="text-muted-foreground shrink-0" />
         }
       </button>
@@ -46,7 +48,7 @@ function CoachSection({ title, content, defaultOpen = false }: {
   )
 }
 
-export default function LiveMode({ session, orderedExercises }: Props) {
+export default function LiveMode({ session, orderedExercises, athletes, readinessMap }: Props) {
   const router = useRouter()
   const intervalRef    = useRef<ReturnType<typeof setInterval> | null>(null)
   const initialSecsRef = useRef(0)
@@ -66,6 +68,22 @@ export default function LiveMode({ session, orderedExercises }: Props) {
   const hasDuration = initialSecs > 0
   const isAlert   = secondsLeft > 0 && secondsLeft <= 30
 
+  // ── Compute per-exercise athlete alerts ───────────────────────────────
+  const alertAthletes = readinessMap
+    .filter(r => r.status === 'yellow' || r.status === 'red')
+    .map(r => {
+      const name         = athletes.find(sa => sa.athlete_id === r.athleteId)?.athlete?.name ?? '—'
+      const doms         = r.wellness?.doms ?? 5
+      const isIncompat   = !!(
+        (ex?.is_eccentric && doms <= 2) ||
+        (ex?.contraindicated_doms_below != null && doms < ex.contraindicated_doms_below)
+      )
+      return { name, status: r.status as 'yellow' | 'red', isIncompat }
+    })
+
+  const hasAlerts        = alertAthletes.length > 0
+  const hasIncompat      = alertAthletes.some(a => a.isIncompat)
+
   // Reset timer when exercise changes
   useEffect(() => {
     stopTimer()
@@ -76,16 +94,12 @@ export default function LiveMode({ session, orderedExercises }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex])
 
-  // Cleanup interval on unmount
   useEffect(() => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [])
 
   function stopTimer() {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
   }
 
   function startTimer() {
@@ -99,43 +113,27 @@ export default function LiveMode({ session, orderedExercises }: Props) {
     }, 1000)
   }
 
-  function pauseTimer() {
-    stopTimer()
-    setRunning(false)
-  }
+  function pauseTimer() { stopTimer(); setRunning(false) }
 
-  function resetTimer() {
-    stopTimer()
-    setSecondsLeft(initialSecsRef.current)
-    setRunning(false)
-  }
+  function resetTimer() { stopTimer(); setSecondsLeft(initialSecsRef.current); setRunning(false) }
 
-  function addTime(seconds: number) {
-    setSecondsLeft(s => s + seconds)
-  }
+  function addTime(seconds: number) { setSecondsLeft(s => s + seconds) }
 
   function advance() {
     stopTimer()
-    if (isLast) {
-      router.push(`/sessao/${session.id}/pse`)
-      return
-    }
+    if (isLast) { router.push(`/sessao/${session.id}/pse`); return }
     setFading(true)
     setTimeout(() => setCurrentIndex(i => i + 1), 200)
     setTimeout(() => setFading(false), 320)
   }
 
-  function handleNext() { advance() }
-
   function handleSkip() {
-    // Fire-and-forget: mark as skipped in DB (non-blocking)
     void markSessionExerciseSkippedAction(current.id, session.id)
     advance()
   }
 
   return (
     <>
-      {/* ── FULLSCREEN OVERLAY ── */}
       <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
 
         {/* ── HEADER ── */}
@@ -183,9 +181,57 @@ export default function LiveMode({ session, orderedExercises }: Props) {
             )}
           </div>
 
+          {/* ── ATHLETE ALERT BANNER ── */}
+          {hasAlerts && (
+            <div
+              key={`alert-${currentIndex}`}
+              className={cn(
+                'mx-4 mt-2 rounded-xl border p-3 flex flex-col gap-2',
+                hasIncompat
+                  ? 'border-red-500/40 bg-red-500/5'
+                  : 'border-orange-500/30 bg-orange-500/5',
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  'text-xs font-semibold',
+                  hasIncompat ? 'text-red-400' : 'text-orange-400',
+                )}>
+                  {hasIncompat ? '🚨' : '⚠'}{' '}
+                  {alertAthletes.length} atleta{alertAthletes.length > 1 ? 's' : ''} em alerta
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {alertAthletes.map((a, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-xs text-foreground">{a.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      {a.isIncompat && (
+                        <span className="text-[10px] font-bold text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded leading-none">
+                          INCOMPAT.
+                        </span>
+                      )}
+                      <span className={cn(
+                        'text-[10px] font-bold leading-none',
+                        a.status === 'yellow' ? 'text-yellow-400' : 'text-red-400',
+                      )}>
+                        {a.status === 'yellow' ? '⚠' : '🛑'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {ex?.regressao && (
+                <p className="text-[11px] text-muted-foreground">
+                  💡 <b className="text-foreground">Regressão</b> disponível abaixo
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Diagram */}
           {ex?.diagram_url ? (
-            <div className="px-4 mt-2">
+            <div className="px-4 mt-3">
               <button
                 type="button"
                 onClick={() => setImageExpanded(true)}
@@ -203,7 +249,7 @@ export default function LiveMode({ session, orderedExercises }: Props) {
               </p>
             </div>
           ) : (
-            <div className="mx-4 mt-2 h-40 rounded-xl border border-dashed border-border bg-card flex items-center justify-center">
+            <div className="mx-4 mt-3 h-40 rounded-xl border border-dashed border-border bg-card flex items-center justify-center">
               <span className="text-muted-foreground text-sm">Sem diagrama</span>
             </div>
           )}
@@ -225,17 +271,13 @@ export default function LiveMode({ session, orderedExercises }: Props) {
 
             {hasDuration && (
               <div className="flex items-center gap-4">
-                {/* Reset */}
                 <button
                   type="button"
                   onClick={resetTimer}
                   className="w-11 h-11 rounded-full border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 active:scale-95 transition-all"
-                  title="Resetar cronômetro"
                 >
                   <RotateCcw size={18} />
                 </button>
-
-                {/* Play / Pause */}
                 <button
                   type="button"
                   onClick={running ? pauseTimer : startTimer}
@@ -250,13 +292,10 @@ export default function LiveMode({ session, orderedExercises }: Props) {
                 >
                   {running ? <><Pause size={16} /> Pausar</> : <><Play size={16} /> Iniciar</>}
                 </button>
-
-                {/* +30s */}
                 <button
                   type="button"
                   onClick={() => addTime(30)}
                   className="w-11 h-11 rounded-full border border-border bg-card flex items-center justify-center text-xs font-bold text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 active:scale-95 transition-all"
-                  title="Adicionar 30 segundos"
                 >
                   +30s
                 </button>
@@ -270,24 +309,26 @@ export default function LiveMode({ session, orderedExercises }: Props) {
 
           {/* ── COACHING POINTS ── */}
           {(ex?.description || ex?.progressao || ex?.regressao) && (
-            <div className="mx-4 mb-4 rounded-xl border border-border bg-card overflow-hidden">
+            <div key={currentIndex} className="mx-4 mb-4 rounded-xl border border-border bg-card overflow-hidden">
               <CoachSection title="📋 Pontos de Correção" content={ex?.description} defaultOpen />
-              <CoachSection title="↑ Progressão" content={ex?.progressao} />
-              <CoachSection title="↓ Regressão" content={ex?.regressao} />
+              <CoachSection title="↑ Progressão"          content={ex?.progressao} />
+              <CoachSection
+                title="↓ Regressão"
+                content={ex?.regressao}
+                defaultOpen={hasAlerts && !!ex?.regressao}
+              />
             </div>
           )}
 
-          {/* Spacer for FAB */}
           <div className="h-36" />
         </div>
 
-        {/* ── FAB (sticky bottom) ── */}
+        {/* ── FAB ── */}
         <div className="shrink-0 absolute bottom-0 left-0 right-0 px-4 pb-8 pt-6 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none">
           <div className="flex flex-col gap-2 pointer-events-auto">
-            {/* Primary: next / finish */}
             <button
               type="button"
-              onClick={handleNext}
+              onClick={advance}
               className={cn(
                 'w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-lg',
                 isLast
@@ -300,8 +341,6 @@ export default function LiveMode({ session, orderedExercises }: Props) {
                 : <>Feito! Próximo exercício <ArrowRight size={19} /></>
               }
             </button>
-
-            {/* Secondary: skip (only when not last) */}
             {!isLast && (
               <button
                 type="button"

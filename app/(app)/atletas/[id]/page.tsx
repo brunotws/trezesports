@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getAthlete, getAthleteSessionHistory, getDailyLoadHistory, getAthleteCalendarSessions } from '@/lib/queries/athletes'
 import { getAthleteACWR } from '@/lib/queries/analytics'
-import { getTodayWellness } from '@/lib/queries/wellness'
+import { getTodayWellness, getWellnessForDates } from '@/lib/queries/wellness'
+import type { Athlete, DailyWellness } from '@/types'
 import AttributeRadar from '@/components/atletas/AttributeRadar'
 import WellnessForm from '@/components/atletas/WellnessForm'
 import AthleteCalendar from '@/components/atletas/AthleteCalendar'
@@ -10,7 +11,7 @@ import ACWRChart from '@/components/dashboard/ACWRChart'
 import PageHeader from '@/components/layout/PageHeader'
 import DeleteAthleteButton from '@/components/atletas/DeleteAthleteButton'
 import { SESSION_TYPE_LABELS } from '@/lib/engine/morphocycle'
-import type { Athlete } from '@/types'
+import { computeEnergyPct, getEnergyMeta } from '@/lib/engine/energy'
 
 function hasEvaluation(athlete: Athlete): boolean {
   const keys: (keyof Athlete)[] = [
@@ -29,6 +30,13 @@ const READINESS_BADGE: Record<string, string> = {
   green:  'bg-green-500/20 text-green-400 border-green-500/30',
   yellow: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   red:    'bg-red-500/20 text-red-400 border-red-500/30',
+}
+
+function wellnessBadgeStatus(w: DailyWellness | null | undefined): 'green' | 'yellow' | 'red' | null {
+  if (!w) return null
+  const vals = [w.fatigue, w.sleep_quality, w.doms, w.mood, w.nutrition_score].filter((v): v is number => v != null)
+  const avg  = vals.reduce((a, b) => a + b, 0) / vals.length
+  return avg > 3.75 ? 'green' : avg >= 2.5 ? 'yellow' : 'red'
 }
 
 function acwrStatus(acwr: number | null): 'green' | 'yellow' | 'red' {
@@ -50,6 +58,15 @@ export default async function AtletaPerfilPage({ params }: Props) {
   ])
 
   if (!athlete) notFound()
+
+  // Fetch wellness for each session date to show badge in history
+  const sessionDates = history.map(sa => {
+    const s = sa.session
+    const weekStart = new Date(s.week.start_date + 'T00:00:00')
+    weekStart.setDate(weekStart.getDate() + s.day_of_week)
+    return weekStart.toISOString().split('T')[0]
+  })
+  const wellnessHistory = await getWellnessForDates(id, sessionDates)
 
   const status = acwrStatus(acwrRow?.acwr ?? null)
 
@@ -115,6 +132,26 @@ export default async function AtletaPerfilPage({ params }: Props) {
               <span>Crônica: <b className="text-foreground">{acwrRow.chronic_load.toFixed(0)}</b></span>
             </div>
           )}
+          {(() => {
+            const energyPct  = computeEnergyPct(acwrRow?.acute_load ?? null)
+            const energyMeta = getEnergyMeta(energyPct)
+            return (
+              <div className={`mt-3 rounded-lg border px-3 py-2.5 ${energyMeta.border}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Barra de Energia</span>
+                  <span className={`text-xs font-semibold ${energyMeta.text}`}>
+                    {energyMeta.label} — {energyPct}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${energyMeta.bar}`}
+                    style={{ width: `${energyPct}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })()}
         </section>
 
         {/* Wellness de hoje */}
@@ -154,7 +191,9 @@ export default async function AtletaPerfilPage({ params }: Props) {
                 const s = sa.session as typeof sa.session & { week: { start_date: string } }
                 const weekStart = new Date(s.week.start_date + 'T00:00:00')
                 weekStart.setDate(weekStart.getDate() + s.day_of_week)
+                const dateIso = weekStart.toISOString().split('T')[0]
                 const dateStr = weekStart.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                const wStatus = wellnessBadgeStatus(wellnessHistory[dateIso])
                 return (
                   <div
                     key={sa.id}
@@ -162,6 +201,18 @@ export default async function AtletaPerfilPage({ params }: Props) {
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground w-10">{dateStr}</span>
+                      {wStatus && (
+                        <div
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            wStatus === 'green'  ? 'bg-green-500'  :
+                            wStatus === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          title={
+                            wStatus === 'green'  ? 'Wellness ok'          :
+                            wStatus === 'yellow' ? 'Readiness moderada'  : 'Readiness baixa'
+                          }
+                        />
+                      )}
                       <span className="text-xs font-medium">{SESSION_TYPE_LABELS[s.session_type as keyof typeof SESSION_TYPE_LABELS] ?? s.session_type}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">

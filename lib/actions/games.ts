@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createGame, deleteGame, addGameAthletes } from '@/lib/queries/games'
+import { createGame, deleteGame, addGameAthletes, upsertGameAthletePse } from '@/lib/queries/games'
 
 export async function createGameAction(
   values: {
@@ -25,4 +25,21 @@ export async function deleteGameAction(id: string): Promise<void> {
   await deleteGame(id)
   revalidatePath('/jogos')
   revalidatePath('/planejador', 'layout')
+}
+
+export async function submitGamePseAction(
+  gameId: string,
+  entries: Array<{ athleteId: string; pse: number | null; durationMin: number; attended: boolean }>,
+): Promise<void> {
+  await upsertGameAthletePse(
+    entries.map(e => ({
+      game_id:      gameId,
+      athlete_id:   e.athleteId,
+      pse:          e.pse,
+      duration_min: e.durationMin,
+      attended:     e.attended,
+    })),
+  )
+  revalidatePath('/jogos')
+  revalidatePath('/atletas', 'layout')
 }

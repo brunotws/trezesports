@@ -29,6 +29,24 @@ export async function getWellnessRange(
   return data ?? []
 }
 
+export async function getWellnessForDates(
+  athleteId: string,
+  dates: string[],
+): Promise<Record<string, DailyWellness>> {
+  if (dates.length === 0) return {}
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('daily_wellness')
+    .select('*')
+    .eq('athlete_id', athleteId)
+    .in('date', dates)
+  const map: Record<string, DailyWellness> = {}
+  for (const row of (data ?? [])) {
+    map[row.date] = row
+  }
+  return map
+}
+
 export async function upsertWellness(
   athleteId: string,
   date: string,
