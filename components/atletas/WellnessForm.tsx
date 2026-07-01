@@ -27,8 +27,9 @@ const BTN_COLORS: Record<number, string> = {
 }
 
 export default function WellnessForm({ athleteId, initial }: Props) {
+  const isEditing = !!initial  // já existe registro de hoje no banco
   const [isPending, startTransition] = useTransition()
-  const [saved, setSaved] = useState(!!initial)
+  const [saved, setSaved] = useState(isEditing)
   const [values, setValues] = useState({
     fatigue:          initial?.fatigue          ?? 3,
     sleep_quality:    initial?.sleep_quality    ?? 3,
@@ -49,8 +50,22 @@ export default function WellnessForm({ athleteId, initial }: Props) {
     })
   }
 
+  const registeredAt = initial?.created_at
+    ? new Date(initial.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : null
+
   return (
     <div className="flex flex-col gap-4">
+      {isEditing && (
+        <div className="flex items-center justify-between text-[11px] px-1">
+          <span className="text-muted-foreground">
+            📅 Avaliação de hoje registrada{registeredAt ? ` às ${registeredAt}` : ''}
+          </span>
+          {saved && (
+            <span className="text-muted-foreground/60 italic">clique nos valores para editar</span>
+          )}
+        </div>
+      )}
       {METRICS.map(({ key, label, description }) => (
         <div key={key} className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between">
@@ -82,7 +97,11 @@ export default function WellnessForm({ athleteId, initial }: Props) {
         disabled={isPending || saved}
         className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm disabled:opacity-60"
       >
-        {isPending ? 'Salvando…' : saved ? 'Wellness salvo ✓' : 'Salvar Wellness'}
+        {isPending
+          ? 'Salvando…'
+          : saved
+            ? (isEditing ? 'Wellness atualizado ✓' : 'Wellness salvo ✓')
+            : (isEditing ? 'Atualizar Wellness' : 'Salvar Wellness')}
       </button>
     </div>
   )

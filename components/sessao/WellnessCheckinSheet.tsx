@@ -64,6 +64,7 @@ interface Props {
 export default function WellnessCheckinSheet({
   open, onOpenChange, athleteId, athleteName, initialValues, onSaved,
 }: Props) {
+  const isEditing = !!initialValues?.fatigue  // true = editando registro já existente de hoje
   const [isPending, startTransition] = useTransition()
   const [values, setValues] = useState<WellnessValues>({
     sleep_quality:   initialValues?.sleep_quality   ?? 3,
@@ -98,8 +99,15 @@ export default function WellnessCheckinSheet({
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onOpenChange(false) }}>
       <SheetContent side="bottom" className="max-h-[92svh] overflow-y-auto rounded-t-2xl px-4 pb-10">
-        <SheetHeader className="mb-5">
-          <SheetTitle className="text-left">Check-in · {athleteName}</SheetTitle>
+        <SheetHeader className="mb-4">
+          <SheetTitle className="text-left">
+            {isEditing ? 'Editar check-in de hoje' : 'Check-in'} · {athleteName}
+          </SheetTitle>
+          {isEditing && (
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              ✏ Você está editando a avaliação já registrada hoje.
+            </p>
+          )}
         </SheetHeader>
 
         <div className="flex flex-col gap-6">
@@ -149,7 +157,7 @@ export default function WellnessCheckinSheet({
           disabled={isPending}
           className="mt-4 w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-50"
         >
-          {isPending ? 'Salvando…' : 'Salvar Check-in'}
+          {isPending ? 'Salvando…' : isEditing ? 'Atualizar Check-in' : 'Salvar Check-in'}
         </button>
       </SheetContent>
     </Sheet>
