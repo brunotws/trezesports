@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getAthlete, getAthleteSessionHistory, getDailyLoadHistory, getAthleteCalendarSessions } from '@/lib/queries/athletes'
 import { getAthleteACWR } from '@/lib/queries/analytics'
 import { getTodayWellness, getWellnessForDates } from '@/lib/queries/wellness'
+import { getRecentGameDateByAthlete } from '@/lib/queries/games'
 import type { Athlete, DailyWellness } from '@/types'
 import AttributeRadar from '@/components/atletas/AttributeRadar'
 import WellnessForm from '@/components/atletas/WellnessForm'
@@ -48,13 +49,14 @@ function acwrStatus(acwr: number | null): 'green' | 'yellow' | 'red' {
 
 export default async function AtletaPerfilPage({ params }: Props) {
   const { id } = params
-  const [athlete, acwrRow, todayWellness, loads, history, calendarSessions] = await Promise.all([
+  const [athlete, acwrRow, todayWellness, loads, history, calendarSessions, gameDaysMap] = await Promise.all([
     getAthlete(id),
     getAthleteACWR(id),
     getTodayWellness(id),
     getDailyLoadHistory(id, 28),
     getAthleteSessionHistory(id, 8),
     getAthleteCalendarSessions(id),
+    getRecentGameDateByAthlete(),
   ])
 
   if (!athlete) notFound()
@@ -133,7 +135,7 @@ export default async function AtletaPerfilPage({ params }: Props) {
             </div>
           )}
           {(() => {
-            const energyPct  = computeEnergyPct(acwrRow?.acute_load ?? null, todayWellness)
+            const energyPct  = computeEnergyPct(acwrRow?.acute_load ?? null, todayWellness, gameDaysMap[id] ?? null)
             const energyMeta = getEnergyMeta(energyPct)
             return (
               <div className={`mt-3 rounded-lg border px-3 py-2.5 ${energyMeta.border}`}>

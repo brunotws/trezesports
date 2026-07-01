@@ -23,6 +23,7 @@ export async function createExerciseAction(values: {
   cores_coletes?: number | null
   num_bolas?: number | null
   is_eccentric?: boolean
+  is_regenerative?: boolean
   contraindicated_doms_below?: number | null
 }): Promise<{ id: string }> {
   const ex = await createExercise(values)

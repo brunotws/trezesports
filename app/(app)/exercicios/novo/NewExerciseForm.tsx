@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { cn } from '@/lib/utils'
 import { createExerciseAction } from '@/lib/actions/exercises'
 import { setExerciseCategoriesAction } from '@/lib/actions/categories'
 import { createClient } from '@/lib/supabase/client'
@@ -51,6 +52,7 @@ export default function NewExerciseForm({ categories }: Props) {
   const [numColetes, setNumColetes]   = useState(0)
   const [coresColetes, setCoresColetes] = useState(1)
   const [numBolas, setNumBolas]       = useState(0)
+  const [isRegenerative, setIsRegenerative] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [categoryIds, setCategoryIds]   = useState<string[]>([])
   const [localCats, setLocalCats]       = useState<Category[]>(categories)
@@ -96,6 +98,7 @@ export default function NewExerciseForm({ categories }: Props) {
         num_coletes: numColetes || null,
         cores_coletes: coresColetes,
         num_bolas: numBolas || null,
+        is_regenerative: isRegenerative,
       })
       if (categoryIds.length > 0) {
         await setExerciseCategoriesAction(id, categoryIds)
@@ -294,6 +297,31 @@ export default function NewExerciseForm({ categories }: Props) {
           <span>1 — Muito fácil</span><span>3 — Moderado</span><span>5 — Muito difícil</span>
         </div>
       </div>
+
+      {/* Exercício Regenerativo */}
+      <button
+        type="button"
+        onClick={() => setIsRegenerative(v => !v)}
+        className={cn(
+          'flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-colors',
+          isRegenerative
+            ? 'border-cyan-500/40 bg-cyan-500/5 text-foreground'
+            : 'border-border bg-card text-muted-foreground',
+        )}
+      >
+        <div className={cn(
+          'w-5 h-5 rounded border-2 flex items-center justify-center shrink-0',
+          isRegenerative ? 'border-cyan-400 bg-cyan-400' : 'border-muted-foreground/40',
+        )}>
+          {isRegenerative && <span className="text-black text-xs font-bold">✓</span>}
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="font-medium">🔄 Exercício Regenerativo</span>
+          <span className="text-[11px] text-muted-foreground">
+            Recuperação ativa — neutraliza ou reduz carga acumulada
+          </span>
+        </div>
+      </button>
 
       {/* Duração */}
       <div className="flex flex-col gap-2">

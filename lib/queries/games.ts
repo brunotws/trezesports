@@ -83,6 +83,7 @@ export async function createGame(values: {
   opponent: string
   type: 'amistoso' | 'campeonato'
   blocks_day_before: boolean
+  intensity_level?: number
 }): Promise<Game> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -92,4 +93,36 @@ export async function createGame(values: {
     .single()
   if (error) throw new Error(error.message)
   return data
+}
+
+export async function getRecentGameDateByAthlete(): Promise<Record<string, number>> {
+  const supabase = createClient()
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const cutoff = sevenDaysAgo.toISOString().split('T')[0]
+
+  const { data: recentGames } = await supabase
+    .from('games')
+    .select('id, date')
+    .gte('date', cutoff)
+  if (!recentGames || recentGames.length === 0) return {}
+
+  const gameIds = recentGames.map(g => g.id)
+  const { data: entries } = await supabase
+    .from('game_athletes')
+    .select('athlete_id, game_id')
+    .in('game_id', gameIds)
+    .eq('attended', true)
+
+  const gameDate = Object.fromEntries(recentGames.map(g => [g.id, g.date as string]))
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const result: Record<string, number> = {}
+  for (const row of entries ?? []) {
+    const d = new Date(gameDate[row.game_id]); d.setHours(0, 0, 0, 0)
+    const days = Math.round((today.getTime() - d.getTime()) / 86400000)
+    if (result[row.athlete_id] === undefined || days < result[row.athlete_id]) {
+      result[row.athlete_id] = days
+    }
+  }
+  return result
 }

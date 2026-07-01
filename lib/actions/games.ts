@@ -9,6 +9,7 @@ export async function createGameAction(
     opponent: string
     type: 'amistoso' | 'campeonato'
     blocks_day_before: boolean
+    intensity_level?: number
   },
   athleteIds: string[] = [],
 ): Promise<{ id: string }> {

@@ -98,8 +98,9 @@ export default function ExercisePickerSheet({
                 </p>
               )}
               {filtered.map(ex => {
-                const isAdded    = selectedIds.has(ex.id)
-                const isHighLoad = criticalEnergy && (ex.fatigue_level ?? 0) >= 4
+                const isAdded         = selectedIds.has(ex.id)
+                const isRegenerative  = ex.is_regenerative === true
+                const isHighLoad      = criticalEnergy && !isRegenerative && (ex.fatigue_level ?? 0) >= 4
                 return (
                   <button
                     key={ex.id}
@@ -132,11 +133,17 @@ export default function ExercisePickerSheet({
                         <span className={cn('text-[10px] px-1.5 py-0.5 rounded border', TYPE_COLORS[ex.type] ?? 'bg-muted text-muted-foreground border-border')}>
                           {ex.type}
                         </span>
-                        {ex.attribute_target && (
-                          <span className="text-[10px] text-muted-foreground truncate">{ex.attribute_target}</span>
-                        )}
-                        {ex.duration_min && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(ex.duration_min)}</span>
+                        {isRegenerative ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border bg-cyan-500/20 text-cyan-400 border-cyan-500/30">🔄 Regenerativo</span>
+                        ) : (
+                          <>
+                            {ex.attribute_target && (
+                              <span className="text-[10px] text-muted-foreground truncate">{ex.attribute_target}</span>
+                            )}
+                            {ex.duration_min && (
+                              <span className="text-[10px] text-muted-foreground shrink-0">{formatDuration(ex.duration_min)}</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

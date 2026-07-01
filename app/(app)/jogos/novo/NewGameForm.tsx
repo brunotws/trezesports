@@ -18,6 +18,7 @@ export default function NewGameForm({ athletes }: Props) {
   const [date, setDate] = useState(today)
   const [opponent, setOpponent] = useState('')
   const [type, setType] = useState<'amistoso' | 'campeonato'>('campeonato')
+  const [intensityLevel, setIntensityLevel] = useState<1 | 2 | 3 | 4 | 5>(3)
   const [blocksVespera, setBlocksVespera] = useState(true)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -41,7 +42,7 @@ export default function NewGameForm({ athletes }: Props) {
     if (!opponent.trim() || !date) return
     startTransition(async () => {
       const game = await createGameAction(
-        { date, opponent: opponent.trim(), type, blocks_day_before: blocksVespera },
+        { date, opponent: opponent.trim(), type, blocks_day_before: blocksVespera, intensity_level: intensityLevel },
         Array.from(selectedIds),
       )
       router.push(`/jogos/${game.id}/pse`)
@@ -89,6 +90,35 @@ export default function NewGameForm({ athletes }: Props) {
               )}
             >
               {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Intensidade */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium">Intensidade da Partida</label>
+        <div className="grid grid-cols-5 gap-1.5">
+          {([
+            [1, 'Leve'],
+            [2, 'Moderada'],
+            [3, 'Normal'],
+            [4, 'Alta'],
+            [5, 'Máxima'],
+          ] as const).map(([lvl, lbl]) => (
+            <button
+              key={lvl}
+              type="button"
+              onClick={() => setIntensityLevel(lvl)}
+              className={cn(
+                'flex flex-col items-center py-2 rounded-lg border text-xs font-medium transition-colors',
+                intensityLevel === lvl
+                  ? 'border-primary/40 bg-primary/10 text-foreground'
+                  : 'border-border bg-card text-muted-foreground',
+              )}
+            >
+              <span className="font-bold text-sm">{lvl}</span>
+              <span className="text-[10px] leading-tight text-center">{lbl}</span>
             </button>
           ))}
         </div>

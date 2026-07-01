@@ -82,6 +82,7 @@ export interface Exercise {
   cores_coletes:              number | null
   num_bolas:                  number | null
   is_eccentric:               boolean
+  is_regenerative:            boolean
   contraindicated_doms_below: number | null
   substitute_exercise_id:     string | null
   created_at:                 string
@@ -143,6 +144,7 @@ export interface SessionAthlete {
   attended:        boolean | null
   pse:             number | null
   individual_srpe: number | null
+  recovery_bonus?: number | null
   created_at:      string
   athlete?:        Athlete
 }
@@ -153,6 +155,7 @@ export interface Game {
   opponent:          string
   type:              GameType
   blocks_day_before: boolean
+  intensity_level?:  number | null
   created_at:        string
 }
 
