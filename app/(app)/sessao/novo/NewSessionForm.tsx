@@ -19,12 +19,19 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { Plus, Trash2, Zap } from 'lucide-react'
+import { BookOpen, Plus, Trash2, Zap } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { createSessionAction, addAthletesToSessionAction, addExercisesToSessionAction } from '@/lib/actions/sessions'
+import { loadTemplateAction } from '@/lib/actions/sessionTemplates'
 import ExercisePickerSheet from '@/components/sessao/ExercisePickerSheet'
 import ExerciseInstanceCard from '@/components/shared/ExerciseInstanceCard'
 import { getEnergyMeta } from '@/lib/engine/energy'
-import type { Athlete, Exercise, ExerciseGroup, ExerciseInstance, Stage } from '@/types'
+import type { Athlete, Exercise, ExerciseGroup, ExerciseInstance, Stage, TemplateSession } from '@/types'
 
 const CATEGORIES = ['Sub-7','Sub-8','Sub-9','Sub-10','Sub-11','Sub-12','Sub-13','Sub-14','Sub-15']
 const OBJECTIVES = ['Técnico', 'Tático', 'Cognitivo', 'Misto']
@@ -53,10 +60,11 @@ interface Props {
   exercises:         Exercise[]
   groups:            ExerciseGroup[]
   athleteEnergyMap?: Record<string, number>
+  templates?:        TemplateSession[]
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function NewSessionForm({ weekId, day, sn, date, athletes, exercises, groups, athleteEnergyMap = {} }: Props) {
+export default function NewSessionForm({ weekId, day, sn, date, athletes, exercises, groups, athleteEnergyMap = {}, templates = [] }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -79,6 +87,11 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
   // Sheet (exercise picker)
   const [sheetOpen, setSheetOpen]         = useState(false)
   const [activeStageId, setActiveStageId] = useState<string | null>(null)
+
+  // Template picker
+  const [templateSheetOpen, setTemplateSheetOpen]   = useState(false)
+  const [isLoadingTemplate, setIsLoadingTemplate]   = useState(false)
+  const [loadedTemplateName, setLoadedTemplateName] = useState<string | null>(null)
 
   // DnD
   const [dragActiveId, setDragActiveId] = useState<string | null>(null)
@@ -191,6 +204,50 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
     setSheetOpen(true)
   }
 
+  // ── Template loader ────────────────────────────────────────────────────────
+  async function applyTemplate(templateId: string) {
+    setIsLoadingTemplate(true)
+    try {
+      const data = await loadTemplateAction(templateId)
+      if (!data) return
+
+      const templateStages = data.stages.length > 0
+        ? data.stages
+        : [{ id: 'fallback', name: 'Principal' }]
+
+      const newStages: Stage[] = templateStages.map(s => ({
+        id:   crypto.randomUUID(),
+        name: s.name,
+      }))
+
+      const nameToId = new Map(newStages.map(s => [s.name, s.id]))
+      const newStageExercises: Record<string, ExerciseInstance[]> = {}
+
+      const sorted = [...data.exercises].sort((a, b) => a.position - b.position)
+      for (const ex of sorted) {
+        const stageId = nameToId.get(ex.block_type ?? '') ?? newStages[0].id
+        if (!newStageExercises[stageId]) newStageExercises[stageId] = []
+        newStageExercises[stageId].push({
+          instanceId:     crypto.randomUUID(),
+          exerciseId:     ex.exercise_id,
+          customDuration: ex.custom_duration,
+        })
+      }
+
+      setStages(newStages)
+      setStageExercises(newStageExercises)
+      if (data.title)     setTitle(data.title)
+      if (data.category)  setCategory(data.category)
+      if (data.objective) setObjective(data.objective)
+
+      const tpl = templates.find(t => t.id === templateId)
+      setLoadedTemplateName(tpl?.title?.replace(/^Modelo:\s*/i, '') ?? 'Modelo')
+      setTemplateSheetOpen(false)
+    } finally {
+      setIsLoadingTemplate(false)
+    }
+  }
+
   // ── DnD ───────────────────────────────────────────────────────────────────
   function handleDragStart({ active }: DragStartEvent) {
     setDragActiveId(active.id as string)
@@ -274,6 +331,25 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-6 px-4 py-6 pb-24">
+
+      {/* ═══ 0. CARREGAR MODELO ═══ */}
+      {templates.length > 0 && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setTemplateSheetOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-primary font-medium"
+          >
+            <BookOpen size={13} />
+            Carregar modelo
+          </button>
+          {loadedTemplateName && (
+            <span className="text-[11px] text-muted-foreground">
+              📋 {loadedTemplateName}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ═══ 1. CABEÇALHO ═══ */}
       <section className="flex flex-col gap-4">
@@ -562,6 +638,42 @@ export default function NewSessionForm({ weekId, day, sn, date, athletes, exerci
       >
         {isPending ? 'Criando…' : 'Criar Sessão'}
       </button>
+
+      {/* Template picker drawer */}
+      <Sheet open={templateSheetOpen} onOpenChange={setTemplateSheetOpen}>
+        <SheetContent side="bottom" className="h-[65vh] rounded-t-2xl p-0 flex flex-col">
+          <SheetHeader className="px-4 pt-4 pb-3 border-b border-border shrink-0">
+            <SheetTitle className="text-sm">Escolher modelo</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto flex flex-col gap-2 p-4">
+            {templates.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={isLoadingTemplate}
+                onClick={() => applyTemplate(t.id)}
+                className="flex items-center justify-between px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-colors text-left disabled:opacity-50"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium">
+                    {t.title?.replace(/^Modelo:\s*/i, '') ?? 'Modelo sem título'}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {t.exerciseCount} {t.exerciseCount === 1 ? 'exercício' : 'exercícios'}
+                    {t.category ? ` · ${t.category}` : ''}
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground shrink-0 ml-3">
+                  {new Date(t.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                </span>
+              </button>
+            ))}
+            {isLoadingTemplate && (
+              <p className="text-xs text-muted-foreground text-center py-4">Carregando…</p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Exercise picker drawer */}
       <ExercisePickerSheet

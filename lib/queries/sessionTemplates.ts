@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Session, SessionExercise, TemplateSession } from '@/types'
+import type { Session, SessionExercise, Stage, TemplateSession } from '@/types'
 
 export async function getTemplates(): Promise<TemplateSession[]> {
   const supabase = createClient()
@@ -88,4 +88,34 @@ export async function bulkDeleteSessions(ids: string[]): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase.from('sessions').delete().in('id', ids)
   if (error) throw new Error(error.message)
+}
+
+export interface TemplateData {
+  title:     string | null
+  category:  string | null
+  objective: string | null
+  stages:    Stage[]
+  exercises: Array<{
+    exercise_id:     string
+    block_type:      string | null
+    position:        number
+    custom_duration: number | null
+  }>
+}
+
+export async function getTemplateWithExercises(templateId: string): Promise<TemplateData | null> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('sessions')
+    .select('title, category, objective, stages, session_exercises(exercise_id, block_type, position, custom_duration)')
+    .eq('id', templateId)
+    .single()
+  if (!data) return null
+  return {
+    title:     data.title?.replace(/^Modelo:\s*/i, '') ?? null,
+    category:  data.category,
+    objective: data.objective,
+    stages:    (data.stages as Stage[] | null) ?? [],
+    exercises: (data.session_exercises as TemplateData['exercises']) ?? [],
+  }
 }

@@ -7,6 +7,8 @@ import {
   deleteSession,
   bulkArchiveSessions,
   bulkDeleteSessions,
+  getTemplateWithExercises,
+  type TemplateData,
 } from '@/lib/queries/sessionTemplates'
 
 export async function cloneAsTemplateAction(sessionId: string): Promise<{ id: string }> {
@@ -35,4 +37,8 @@ export async function bulkArchiveAction(ids: string[]): Promise<void> {
 export async function bulkDeleteAction(ids: string[]): Promise<void> {
   await bulkDeleteSessions(ids)
   revalidatePath('/planejador', 'layout')
+}
+
+export async function loadTemplateAction(templateId: string): Promise<TemplateData | null> {
+  return getTemplateWithExercises(templateId)
 }
