@@ -2,14 +2,27 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { getAthletes } from '@/lib/queries/athletes'
 import { getAllACWR } from '@/lib/queries/analytics'
+import { getAllTodayWellness } from '@/lib/queries/wellness'
+import { computeEnergyPct } from '@/lib/engine/energy'
 import AthleteCard from '@/components/atletas/AthleteCard'
 import PageHeader from '@/components/layout/PageHeader'
 import type { ACWRRow } from '@/types'
 
 export default async function AtletasPage() {
-  const [athletes, acwrRows] = await Promise.all([getAthletes(), getAllACWR()])
+  const [athletes, acwrRows, allWellness] = await Promise.all([
+    getAthletes(),
+    getAllACWR(),
+    getAllTodayWellness(),
+  ])
 
   const acwrMap = Object.fromEntries(acwrRows.map((r: ACWRRow) => [r.athlete_id, r]))
+
+  const energyMap = Object.fromEntries(
+    athletes.map(a => [
+      a.id,
+      computeEnergyPct(acwrMap[a.id]?.acute_load ?? null, allWellness[a.id] ?? null),
+    ]),
+  )
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -40,6 +53,7 @@ export default async function AtletasPage() {
               key={athlete.id}
               athlete={athlete}
               acwr={acwrMap[athlete.id] ?? null}
+              energyPct={energyMap[athlete.id]}
             />
           ))
         )}

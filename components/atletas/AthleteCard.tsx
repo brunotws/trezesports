@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import FatigueBadge from './FatigueBadge'
+import { getEnergyMeta } from '@/lib/engine/energy'
 import type { Athlete, ACWRRow } from '@/types'
 
 interface Props {
-  athlete: Athlete
-  acwr?:   ACWRRow | null
+  athlete:    Athlete
+  acwr?:      ACWRRow | null
+  energyPct?: number | null
 }
 
 const STATUS_RING: Record<string, string> = {
@@ -29,8 +31,9 @@ function acwrStatus(acwr: number | null): string {
   return 'red'
 }
 
-export default function AthleteCard({ athlete, acwr }: Props) {
-  const status = acwrStatus(acwr?.acwr ?? null)
+export default function AthleteCard({ athlete, acwr, energyPct }: Props) {
+  const status    = acwrStatus(acwr?.acwr ?? null)
+  const eMeta     = energyPct != null ? getEnergyMeta(energyPct) : null
   return (
     <Link
       href={`/atletas/${athlete.id}`}
@@ -45,6 +48,19 @@ export default function AthleteCard({ athlete, acwr }: Props) {
           {athlete.position ?? '—'} · {athlete.modality === 'futsal' ? 'Futsal' : 'Futebol'}
           {athlete.turma ? ` · ${athlete.turma}` : ''}
         </span>
+        {eMeta && energyPct != null && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <div className="w-14 h-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full ${eMeta.bar}`}
+                style={{ width: `${energyPct}%` }}
+              />
+            </div>
+            <span className={`text-[10px] font-semibold ${eMeta.text}`}>
+              ⚡{energyPct}%
+            </span>
+          </div>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1">
         <FatigueBadge accumulated={acwrFatigue(acwr?.acwr ?? null)} />
